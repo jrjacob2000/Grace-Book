@@ -79,7 +79,7 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
   const activeAuth = getFirebaseAuth();
   if (!activeAuth) {
     throw new Error(
-      'Google Drive Cloud Sync is not configured in this build (no VITE_FIREBASE_API_KEY set). You can use "Export JSON" and "Import Data" in the top bar for 100% offline local backups.'
+      'Google Drive Cloud Sync is not configured in this build (VITE_FIREBASE_API_KEY and VITE_FIREBASE_PROJECT_ID are empty). For local dev, add them to .env.local; for GitHub Pages, add them to Repository Secrets and re-run the Deploy workflow.'
     );
   }
 
@@ -96,6 +96,23 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (error: any) {
     console.error('Google Sign-In error:', error);
+    const code = error?.code || '';
+    const host = typeof window !== 'undefined' ? window.location.hostname : 'your-domain.github.io';
+    if (code === 'auth/unauthorized-domain') {
+      throw new Error(
+        `Domain "${host}" is not authorized in Firebase. Go to Firebase Console → Authentication → Settings → Authorized domains and add "${host}".`
+      );
+    }
+    if (code === 'auth/popup-blocked') {
+      throw new Error(
+        'Sign-in popup was blocked by your browser. Please allow popups for this site and try again.'
+      );
+    }
+    if (code === 'auth/invalid-api-key' || code === 'auth/api-key-not-valid.-please-pass-a-valid-api-key.') {
+      throw new Error(
+        'Invalid Firebase API key. Check that VITE_FIREBASE_API_KEY in your GitHub Actions Secrets or .env.local matches your Firebase project.'
+      );
+    }
     throw error;
   } finally {
     isSigningIn = false;
