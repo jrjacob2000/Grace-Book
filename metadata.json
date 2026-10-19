@@ -1,0 +1,6 @@
+{
+  "name": "GraceBooks - Church Financial Tracker",
+  "description": "Comprehensive church financial tracking with Google Drive JSON storage, tithes and collections tracking, funds & accounts management, budget dashboard, and board monthly reports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

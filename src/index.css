@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@layer utilities {
+  @media print {
+    body {
+      background: white !important;
+      color: black !important;
+    }
+    header, nav, button, .print\\:hidden {
+      display: none !important;
+    }
+    main {
+      padding: 0 !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+    }
+    .shadow-xs, .shadow-sm, .shadow-md, .shadow-xl, .shadow-2xl {
+      box-shadow: none !important;
+    }
+  }
+}
