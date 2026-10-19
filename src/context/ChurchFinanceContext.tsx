@@ -38,6 +38,8 @@ import {
 
 export const getStorageKeyForYear = (year: number) => `gracebooks_cfgp_data_${year}`;
 
+const round2 = (num: number): number => Math.round((num + Number.EPSILON) * 100) / 100;
+
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error' | 'unsaved_changes';
 
 export interface PendingConfirmation {
@@ -129,6 +131,11 @@ interface ChurchFinanceContextType {
   deleteAccount: (id: string) => void;
 
   transferFunds: (transfer: Omit<FundTransfer, 'id' | 'createdAt'>) => void;
+  deleteTransfer: (id: string) => void;
+
+  isMonthApproved: (dateOrMonthKey: string) => boolean;
+  isSelectedMonthApproved: boolean;
+  reopenClosedYear: () => void;
 
   addBudgetItem: (item: Omit<BudgetItem, 'id'>) => void;
   updateBudgetItem: (item: BudgetItem) => void;
@@ -667,10 +674,10 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       });
 
       const updatedFunds = prev.funds.map((f) =>
-        fundMap[f.id] ? { ...f, balance: f.balance + fundMap[f.id] } : f
+        fundMap[f.id] ? { ...f, balance: round2(f.balance + fundMap[f.id]) } : f
       );
       const updatedAccounts = prev.accounts.map((a) =>
-        accountMap[a.id] ? { ...a, balance: a.balance + accountMap[a.id] } : a
+        accountMap[a.id] ? { ...a, balance: round2(a.balance + accountMap[a.id]) } : a
       );
 
       return {
@@ -703,10 +710,10 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       });
 
       const updatedFunds = prev.funds.map((f) =>
-        fundMap[f.id] ? { ...f, balance: f.balance - fundMap[f.id] } : f
+        fundMap[f.id] ? { ...f, balance: round2(f.balance - fundMap[f.id]) } : f
       );
       const updatedAccounts = prev.accounts.map((a) =>
-        accountMap[a.id] ? { ...a, balance: a.balance - accountMap[a.id] } : a
+        accountMap[a.id] ? { ...a, balance: round2(a.balance - accountMap[a.id]) } : a
       );
 
       return {
@@ -790,10 +797,10 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
 
     updateData((prev) => {
       const updatedFunds = prev.funds.map((f) =>
-        f.id === item.fundId ? { ...f, balance: f.balance + item.totalAmount } : f
+        f.id === item.fundId ? { ...f, balance: round2(f.balance + item.totalAmount) } : f
       );
       const updatedAccounts = prev.accounts.map((a) =>
-        a.id === item.accountId ? { ...a, balance: a.balance + item.totalAmount } : a
+        a.id === item.accountId ? { ...a, balance: round2(a.balance + item.totalAmount) } : a
       );
 
       return {
@@ -813,11 +820,11 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       let funds = [...prev.funds];
       if (oldItem.fundId === updatedItem.fundId) {
         const diff = updatedItem.totalAmount - oldItem.totalAmount;
-        funds = funds.map((f) => (f.id === updatedItem.fundId ? { ...f, balance: f.balance + diff } : f));
+        funds = funds.map((f) => (f.id === updatedItem.fundId ? { ...f, balance: round2(f.balance + diff) } : f));
       } else {
         funds = funds.map((f) => {
-          if (f.id === oldItem.fundId) return { ...f, balance: f.balance - oldItem.totalAmount };
-          if (f.id === updatedItem.fundId) return { ...f, balance: f.balance + updatedItem.totalAmount };
+          if (f.id === oldItem.fundId) return { ...f, balance: round2(f.balance - oldItem.totalAmount) };
+          if (f.id === updatedItem.fundId) return { ...f, balance: round2(f.balance + updatedItem.totalAmount) };
           return f;
         });
       }
@@ -826,12 +833,12 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       if (oldItem.accountId === updatedItem.accountId) {
         const diff = updatedItem.totalAmount - oldItem.totalAmount;
         accounts = accounts.map((a) =>
-          a.id === updatedItem.accountId ? { ...a, balance: a.balance + diff } : a
+          a.id === updatedItem.accountId ? { ...a, balance: round2(a.balance + diff) } : a
         );
       } else {
         accounts = accounts.map((a) => {
-          if (a.id === oldItem.accountId) return { ...a, balance: a.balance - oldItem.totalAmount };
-          if (a.id === updatedItem.accountId) return { ...a, balance: a.balance + updatedItem.totalAmount };
+          if (a.id === oldItem.accountId) return { ...a, balance: round2(a.balance - oldItem.totalAmount) };
+          if (a.id === updatedItem.accountId) return { ...a, balance: round2(a.balance + updatedItem.totalAmount) };
           return a;
         });
       }
@@ -851,10 +858,10 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!item) return prev;
 
       const funds = prev.funds.map((f) =>
-        f.id === item.fundId ? { ...f, balance: f.balance - item.totalAmount } : f
+        f.id === item.fundId ? { ...f, balance: round2(f.balance - item.totalAmount) } : f
       );
       const accounts = prev.accounts.map((a) =>
-        a.id === item.accountId ? { ...a, balance: a.balance - item.totalAmount } : a
+        a.id === item.accountId ? { ...a, balance: round2(a.balance - item.totalAmount) } : a
       );
 
       return {
@@ -877,10 +884,10 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
 
     updateData((prev) => {
       const funds = prev.funds.map((f) =>
-        f.id === item.fundId ? { ...f, balance: f.balance - effectiveDeduction } : f
+        f.id === item.fundId ? { ...f, balance: round2(f.balance - effectiveDeduction) } : f
       );
       const accounts = prev.accounts.map((a) =>
-        a.id === item.accountId ? { ...a, balance: a.balance - effectiveDeduction } : a
+        a.id === item.accountId ? { ...a, balance: round2(a.balance - effectiveDeduction) } : a
       );
 
       return {
@@ -903,11 +910,11 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       let funds = [...prev.funds];
       if (oldItem.fundId === updatedItem.fundId) {
         const diff = newDeduction - oldDeduction;
-        funds = funds.map((f) => (f.id === updatedItem.fundId ? { ...f, balance: f.balance - diff } : f));
+        funds = funds.map((f) => (f.id === updatedItem.fundId ? { ...f, balance: round2(f.balance - diff) } : f));
       } else {
         funds = funds.map((f) => {
-          if (f.id === oldItem.fundId) return { ...f, balance: f.balance + oldDeduction };
-          if (f.id === updatedItem.fundId) return { ...f, balance: f.balance - newDeduction };
+          if (f.id === oldItem.fundId) return { ...f, balance: round2(f.balance + oldDeduction) };
+          if (f.id === updatedItem.fundId) return { ...f, balance: round2(f.balance - newDeduction) };
           return f;
         });
       }
@@ -916,12 +923,12 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       if (oldItem.accountId === updatedItem.accountId) {
         const diff = newDeduction - oldDeduction;
         accounts = accounts.map((a) =>
-          a.id === updatedItem.accountId ? { ...a, balance: a.balance - diff } : a
+          a.id === updatedItem.accountId ? { ...a, balance: round2(a.balance - diff) } : a
         );
       } else {
         accounts = accounts.map((a) => {
-          if (a.id === oldItem.accountId) return { ...a, balance: a.balance + oldDeduction };
-          if (a.id === updatedItem.accountId) return { ...a, balance: a.balance - newDeduction };
+          if (a.id === oldItem.accountId) return { ...a, balance: round2(a.balance + oldDeduction) };
+          if (a.id === updatedItem.accountId) return { ...a, balance: round2(a.balance - newDeduction) };
           return a;
         });
       }
@@ -943,10 +950,10 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       const restoredAmount = item.status === 'void' ? 0 : item.amount;
 
       const funds = prev.funds.map((f) =>
-        f.id === item.fundId ? { ...f, balance: f.balance + restoredAmount } : f
+        f.id === item.fundId ? { ...f, balance: round2(f.balance + restoredAmount) } : f
       );
       const accounts = prev.accounts.map((a) =>
-        a.id === item.accountId ? { ...a, balance: a.balance + restoredAmount } : a
+        a.id === item.accountId ? { ...a, balance: round2(a.balance + restoredAmount) } : a
       );
 
       return {
@@ -1012,14 +1019,14 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
 
     updateData((prev) => {
       const funds = prev.funds.map((f) => {
-        if (f.id === transfer.fromFundId) return { ...f, balance: f.balance - transfer.amount };
-        if (f.id === transfer.toFundId) return { ...f, balance: f.balance + transfer.amount };
+        if (f.id === transfer.fromFundId) return { ...f, balance: round2(f.balance - transfer.amount) };
+        if (f.id === transfer.toFundId) return { ...f, balance: round2(f.balance + transfer.amount) };
         return f;
       });
 
       const accounts = prev.accounts.map((a) => {
-        if (a.id === transfer.fromAccountId) return { ...a, balance: a.balance - transfer.amount };
-        if (a.id === transfer.toAccountId) return { ...a, balance: a.balance + transfer.amount };
+        if (a.id === transfer.fromAccountId) return { ...a, balance: round2(a.balance - transfer.amount) };
+        if (a.id === transfer.toAccountId) return { ...a, balance: round2(a.balance + transfer.amount) };
         return a;
       });
 
@@ -1030,6 +1037,47 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         transfers: [newTransfer, ...prev.transfers],
       };
     });
+  };
+
+  const deleteTransfer = (id: string) => {
+    updateData((prev) => {
+      const tr = prev.transfers.find((t) => t.id === id);
+      if (!tr) return prev;
+
+      const funds = prev.funds.map((f) => {
+        if (f.id === tr.fromFundId) return { ...f, balance: round2(f.balance + tr.amount) };
+        if (f.id === tr.toFundId) return { ...f, balance: round2(f.balance - tr.amount) };
+        return f;
+      });
+
+      const accounts = prev.accounts.map((a) => {
+        if (a.id === tr.fromAccountId) return { ...a, balance: round2(a.balance + tr.amount) };
+        if (a.id === tr.toAccountId) return { ...a, balance: round2(a.balance - tr.amount) };
+        return a;
+      });
+
+      return {
+        ...prev,
+        funds,
+        accounts,
+        transfers: prev.transfers.filter((t) => t.id !== id),
+      };
+    });
+  };
+
+  const isMonthApproved = useCallback(
+    (dateOrMonthKey: string) => {
+      const monthKey = dateOrMonthKey.slice(0, 7);
+      return data.boardReports?.[monthKey]?.motionStatus === 'approved';
+    },
+    [data.boardReports]
+  );
+
+  const reopenClosedYear = () => {
+    updateData((prev) => ({
+      ...prev,
+      isYearClosed: false,
+    }));
   };
 
   const addBudgetItem = (item: Omit<BudgetItem, 'id'>) => {
@@ -1165,6 +1213,10 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
     return `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
   }, [selectedYear, selectedMonth]);
 
+  const isSelectedMonthApproved = useMemo(() => {
+    return data.boardReports?.[monthString]?.motionStatus === 'approved';
+  }, [data.boardReports, monthString]);
+
   const monthCollections = useMemo(() => {
     return data.collections
       .filter((c) => c.date.startsWith(monthString))
@@ -1260,6 +1312,10 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         updateAccount,
         deleteAccount,
         transferFunds,
+        deleteTransfer,
+        isMonthApproved,
+        isSelectedMonthApproved,
+        reopenClosedYear,
         addBudgetItem,
         updateBudgetItem,
         deleteBudgetItem,

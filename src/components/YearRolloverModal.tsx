@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Calendar,
@@ -9,6 +9,8 @@ import {
   Building,
   Wallet,
   Sparkles,
+  Unlock,
+  Lock,
 } from 'lucide-react';
 import { useChurchFinance } from '../context/ChurchFinanceContext';
 
@@ -27,10 +29,18 @@ export const YearRolloverModal: React.FC<YearRolloverModalProps> = ({ isOpen, on
     ytdCollections,
     ytdExpenses,
     closeYearAndRollover,
+    isCurrentYearClosed,
+    reopenClosedYear,
   } = useChurchFinance();
 
   const [targetYear, setTargetYear] = useState<number>(selectedYear + 1);
   const currency = data.profile.currencySymbol || '₱';
+
+  useEffect(() => {
+    if (isOpen) {
+      setTargetYear(selectedYear + 1);
+    }
+  }, [isOpen, selectedYear]);
 
   if (!isOpen) return null;
 
@@ -67,6 +77,33 @@ export const YearRolloverModal: React.FC<YearRolloverModalProps> = ({ isOpen, on
 
         {/* Content */}
         <div className="p-6 overflow-y-auto space-y-5 text-xs">
+          {isCurrentYearClosed && (
+            <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <Lock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-bold text-amber-950 text-xs">
+                    Fiscal Year {selectedYear} is Sealed &amp; Closed
+                  </h4>
+                  <p className="text-[11px] text-amber-800 mt-0.5">
+                    This year is read-only. If an audit adjustment is required, you can temporarily unseal this fiscal year.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  reopenClosedYear();
+                  onClose();
+                }}
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 shrink-0 shadow-xs transition-colors"
+              >
+                <Unlock className="w-3.5 h-3.5" />
+                <span>Unseal {selectedYear}</span>
+              </button>
+            </div>
+          )}
+
           {/* Transition Visual */}
           <div className="flex items-center justify-center gap-4 py-3 bg-slate-50 rounded-xl border border-slate-200">
             <div className="text-center">

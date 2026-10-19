@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Wallet,
   Building,
@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   HelpCircle,
   Sparkles,
+  Lock,
 } from 'lucide-react';
 import { useChurchFinance } from '../context/ChurchFinanceContext';
 import { Fund, Account, FundTransfer, FundType, AccountType } from '../types/finance';
@@ -42,6 +43,9 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
     updateAccount,
     deleteAccount,
     transferFunds,
+    deleteTransfer,
+    selectedYear,
+    isCurrentYearClosed,
     requestUserConfirmation,
   } = useChurchFinance();
 
@@ -83,6 +87,18 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
   const [transferReason, setTransferReason] = useState('');
   const [transferAuthorizedBy, setTransferAuthorizedBy] = useState('Elder Board Resolution');
   const [transferDate, setTransferDate] = useState(new Date().toISOString().split('T')[0]);
+
+  useEffect(() => {
+    if (isTransferModalOpen) {
+      setFromFundId(data.funds[0]?.id || '');
+      setToFundId(data.funds[1]?.id || data.funds[0]?.id || '');
+      setFromAccountId(data.accounts[0]?.id || '');
+      setToAccountId(data.accounts[1]?.id || data.accounts[0]?.id || '');
+      setTransferAmount(0);
+      setTransferReason('');
+      setTransferDate(new Date().toISOString().split('T')[0]);
+    }
+  }, [isTransferModalOpen, data.funds, data.accounts]);
 
   // Open Fund Modal
   const openNewFundModal = () => {
@@ -185,9 +201,11 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
   };
 
   // Handle Transfer
+  const isNoOpTransfer = fromFundId === toFundId && fromAccountId === toAccountId;
+
   const handleTransfer = (e: React.FormEvent) => {
     e.preventDefault();
-    if (transferAmount <= 0) {
+    if (transferAmount <= 0 || isNoOpTransfer) {
       return;
     }
 
@@ -239,6 +257,20 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
 
   return (
     <div className="space-y-6 pb-12">
+      {isCurrentYearClosed && (
+        <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5">
+            <Lock className="w-4 h-4 text-amber-700 shrink-0" />
+            <span>
+              <strong>Fiscal Year {selectedYear} is Closed & Audited:</strong> Fund balances, depository accounts, and transfers are locked to preserve year-end rolled-forward balances.
+            </span>
+          </div>
+          <span className="px-2.5 py-0.5 rounded-full bg-amber-200/80 text-amber-900 font-semibold text-[10px] uppercase shrink-0">
+            Audit Protected
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs">
         <div>
@@ -251,15 +283,10 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
         </div>
         <button
           onClick={() => {
-            setFromFundId(data.funds[0]?.id || '');
-            setToFundId(data.funds[1]?.id || data.funds[0]?.id || '');
-            setFromAccountId(data.accounts[0]?.id || '');
-            setToAccountId(data.accounts[1]?.id || data.accounts[0]?.id || '');
-            setTransferAmount(0);
-            setTransferReason('');
             setIsTransferModalOpen(true);
           }}
-          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
+          disabled={isCurrentYearClosed}
+          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
         >
           <ArrowRightLeft className="w-4 h-4" />
           <span>Inter-Fund Transfer</span>
@@ -305,7 +332,8 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
             {!isReconciled && (
               <button
                 onClick={() => setIsReconcileModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors shrink-0"
+                disabled={isCurrentYearClosed}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg shadow-xs transition-colors shrink-0"
               >
                 <Wrench className="w-3.5 h-3.5" />
                 <span>Fix Discrepancy</span>
@@ -331,7 +359,8 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
             </div>
             <button
               onClick={openNewFundModal}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+              disabled={isCurrentYearClosed}
+              className="text-xs font-semibold text-blue-600 hover:text-blue-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Fund</span>
@@ -378,23 +407,37 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
                       <div className="flex items-center justify-end gap-1.5 mt-1">
                         <button
                           onClick={() => openEditFundModal(fund)}
-                          className="p-1 text-slate-400 hover:text-slate-600"
+                          disabled={isCurrentYearClosed}
+                          className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-40"
                           title="Edit Fund"
                         >
                           <Edit2 className="w-3 h-3" />
                         </button>
                         <button
                           onClick={() => {
+                            const linkedCount =
+                              data.collections.filter((c) => c.fundId === fund.id).length +
+                              data.expenses.filter((e) => e.fundId === fund.id).length +
+                              data.transfers.filter((t) => t.fromFundId === fund.id || t.toFundId === fund.id).length;
+                            const balanceNote =
+                              fund.balance !== 0
+                                ? ` WARNING: This fund currently has a non-zero balance of ${currency}${fund.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}, which will create a bank-to-fund variance unless transferred first.`
+                                : '';
+                            const linkedNote =
+                              linkedCount > 0
+                                ? ` Note: ${linkedCount} transaction(s) reference this fund.`
+                                : '';
                             requestUserConfirmation({
                               title: `Delete Fund "${fund.name}"?`,
-                              message: `Are you sure you want to delete "${fund.name}"? Only delete a fund if its balance is zero or has already been transferred to another fund.`,
+                              message: `Are you sure you want to delete "${fund.name}"?${balanceNote}${linkedNote}`,
                               affectedItem: `${fund.name} (Code ${fund.code})`,
                               confirmLabel: 'Delete Fund',
                               isDestructive: true,
                               onConfirm: () => deleteFund(fund.id),
                             });
                           }}
-                          className="p-1 text-slate-400 hover:text-rose-600"
+                          disabled={isCurrentYearClosed || data.funds.length <= 1}
+                          className="p-1 text-slate-400 hover:text-rose-600 disabled:opacity-40"
                           title="Delete Fund"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -447,7 +490,8 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
             </div>
             <button
               onClick={openNewAccountModal}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+              disabled={isCurrentYearClosed}
+              className="text-xs font-semibold text-blue-600 hover:text-blue-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Account</span>
@@ -483,24 +527,52 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
                       </div>
                       <div className="flex items-center justify-end gap-1.5 mt-1">
                         <button
+                          onClick={() => {
+                            const today = new Date().toISOString().split('T')[0];
+                            updateAccount({
+                              ...acct,
+                              lastReconciledDate: today,
+                            });
+                          }}
+                          disabled={isCurrentYearClosed}
+                          className="px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 disabled:opacity-40 border border-emerald-200 rounded transition-colors"
+                          title="Stamp Last Reconciled Date to Today"
+                        >
+                          ✓ Reconciled Today
+                        </button>
+                        <button
                           onClick={() => openEditAccountModal(acct)}
-                          className="p-1 text-slate-400 hover:text-slate-600"
+                          disabled={isCurrentYearClosed}
+                          className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-40"
                           title="Edit Account"
                         >
                           <Edit2 className="w-3 h-3" />
                         </button>
                         <button
                           onClick={() => {
+                            const linkedCount =
+                              data.collections.filter((c) => c.accountId === acct.id).length +
+                              data.expenses.filter((e) => e.accountId === acct.id).length +
+                              data.transfers.filter((t) => t.fromAccountId === acct.id || t.toAccountId === acct.id).length;
+                            const balanceNote =
+                              acct.balance !== 0
+                                ? ` WARNING: This depository account currently holds ${currency}${acct.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}, which will create a bank-to-fund variance unless transferred first.`
+                                : '';
+                            const linkedNote =
+                              linkedCount > 0
+                                ? ` Note: ${linkedCount} transaction(s) reference this account.`
+                                : '';
                             requestUserConfirmation({
                               title: `Delete Bank Account "${acct.name}"?`,
-                              message: `Are you sure you want to delete "${acct.name}"? Only delete a depository account if its balance is zero or has been transferred.`,
+                              message: `Are you sure you want to delete "${acct.name}"?${balanceNote}${linkedNote}`,
                               affectedItem: `${acct.name} (${acct.institution})`,
                               confirmLabel: 'Delete Account',
                               isDestructive: true,
                               onConfirm: () => deleteAccount(acct.id),
                             });
                           }}
-                          className="p-1 text-slate-400 hover:text-rose-600"
+                          disabled={isCurrentYearClosed || data.accounts.length <= 1}
+                          className="p-1 text-slate-400 hover:text-rose-600 disabled:opacity-40"
                           title="Delete Account"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -537,23 +609,32 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[11px] uppercase">
                   <th className="py-2.5 px-3">Date</th>
-                  <th className="py-2.5 px-3">From Fund</th>
-                  <th className="py-2.5 px-3">To Fund</th>
+                  <th className="py-2.5 px-3">From Fund & Account</th>
+                  <th className="py-2.5 px-3">To Fund & Account</th>
                   <th className="py-2.5 px-3 text-right">Amount</th>
                   <th className="py-2.5 px-3">Purpose & Board Authorization</th>
+                  <th className="py-2.5 px-3 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {data.transfers.map((tr) => {
                   const fromFund = data.funds.find((f) => f.id === tr.fromFundId);
                   const toFund = data.funds.find((f) => f.id === tr.toFundId);
+                  const fromAcct = data.accounts.find((a) => a.id === tr.fromAccountId);
+                  const toAcct = data.accounts.find((a) => a.id === tr.toAccountId);
 
                   return (
                     <tr key={tr.id} className="hover:bg-slate-50">
-                      <td className="py-2.5 px-3 font-mono text-slate-800">{tr.date}</td>
-                      <td className="py-2.5 px-3 text-slate-700">{fromFund?.name || tr.fromFundId}</td>
-                      <td className="py-2.5 px-3 text-slate-700 font-medium">{toFund?.name || tr.toFundId}</td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                      <td className="py-2.5 px-3 font-mono text-slate-800 whitespace-nowrap">{tr.date}</td>
+                      <td className="py-2.5 px-3">
+                        <div className="text-slate-800 font-medium">{fromFund?.name || tr.fromFundId}</div>
+                        <div className="text-[10px] text-slate-400">{fromAcct?.name || tr.fromAccountId}</div>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <div className="text-slate-900 font-semibold">{toFund?.name || tr.toFundId}</div>
+                        <div className="text-[10px] text-slate-400">{toAcct?.name || tr.toAccountId}</div>
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
                         {currency}{tr.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-2.5 px-3 text-slate-600">
@@ -563,6 +644,25 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
                             Auth: {tr.authorizedBy}
                           </span>
                         )}
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <button
+                          onClick={() => {
+                            requestUserConfirmation({
+                              title: 'Reverse & Delete Inter-Fund Transfer?',
+                              message: `Reverse the ${currency}${tr.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} transfer from "${fromFund?.name || 'Source'}" to "${toFund?.name || 'Destination'}"? Both fund and bank account balances will be automatically restored.`,
+                              affectedItem: `${tr.reason} (${tr.date})`,
+                              confirmLabel: 'Reverse Transfer',
+                              isDestructive: true,
+                              onConfirm: () => deleteTransfer(tr.id),
+                            });
+                          }}
+                          disabled={isCurrentYearClosed}
+                          title="Reverse & Delete Transfer"
+                          className="p-1 text-slate-400 hover:text-rose-600 disabled:opacity-40 rounded hover:bg-slate-100"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </td>
                     </tr>
                   );
@@ -706,6 +806,12 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
                 />
               </div>
 
+              {isNoOpTransfer && (
+                <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px]">
+                  Please select a different Destination Fund or a different Destination Bank Account to execute a transfer.
+                </div>
+              )}
+
               <div className="pt-3 border-t border-slate-200 flex justify-end gap-2.5 shrink-0">
                 <button
                   type="button"
@@ -716,7 +822,8 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm"
+                  disabled={isNoOpTransfer || transferAmount <= 0}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg shadow-sm"
                 >
                   Execute Transfer
                 </button>

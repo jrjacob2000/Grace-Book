@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   X,
   Cloud,
@@ -50,25 +50,27 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
   } = useChurchFinance();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [localUploadError, setLocalUploadError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setLocalUploadError(null);
 
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const parsed = JSON.parse(event.target?.result as string);
-        if (parsed && parsed.funds && parsed.collections) {
+        if (parsed && Array.isArray(parsed.funds) && Array.isArray(parsed.accounts)) {
           importJsonFile(parsed);
           onClose();
         } else {
-          alert('Invalid church financial JSON format.');
+          setLocalUploadError('Invalid church financial JSON format: missing funds or accounts array.');
         }
-      } catch (err) {
-        alert('Could not parse JSON file. Please check file syntax.');
+      } catch {
+        setLocalUploadError('Could not parse JSON file. Please verify the file is a valid JSON backup.');
       }
     };
     reader.readAsText(file);
@@ -380,6 +382,12 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
                 />
               </label>
             </div>
+            {localUploadError && (
+              <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500" />
+                <span>{localUploadError}</span>
+              </div>
+            )}
           </div>
 
           {/* Sample Data Reset */}

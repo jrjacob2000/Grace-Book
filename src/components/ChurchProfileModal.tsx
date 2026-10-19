@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Building2, Save } from 'lucide-react';
 import { useChurchFinance } from '../context/ChurchFinanceContext';
 import { ChurchProfile } from '../types/finance';
@@ -31,6 +31,12 @@ export const ChurchProfileModal: React.FC<ChurchProfileModalProps> = ({
   const [profile, setProfile] = useState<ChurchProfile>({ ...data.profile });
   const [newCollectionCat, setNewCollectionCat] = useState('');
   const [newExpenseCat, setNewExpenseCat] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setProfile({ ...data.profile });
+    }
+  }, [isOpen, data.profile]);
 
   if (!isOpen) return null;
 

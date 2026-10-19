@@ -1,4 +1,5 @@
 import { ChurchFinancialData, Fund } from '../types/finance';
+import { APP_LEDGER_VERSION } from '../constants/version';
 
 export const FOURSQUARE_FUNDS: Omit<Fund, 'balance' | 'targetBalance'>[] = [
   {
@@ -112,7 +113,7 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
 ];
 
 export const INITIAL_CHURCH_DATA: ChurchFinancialData = {
-  version: '2.2.0',
+  version: APP_LEDGER_VERSION,
   fiscalYear: 2026,
   isDemoData: true,
   isYearClosed: false,

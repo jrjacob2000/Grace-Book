@@ -18,6 +18,9 @@ import {
   Upload,
   FlaskConical,
   Rocket,
+  Cloud,
+  UserCheck,
+  Download,
 } from 'lucide-react';
 import { useChurchFinance } from '../context/ChurchFinanceContext';
 
@@ -29,6 +32,8 @@ interface DashboardProps {
   onOpenHelp?: () => void;
   onOpenImport?: () => void;
   onOpenDataMode?: () => void;
+  onOpenProfile?: () => void;
+  onOpenDrive?: () => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -39,6 +44,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onOpenHelp,
   onOpenImport,
   onOpenDataMode,
+  onOpenProfile,
+  onOpenDrive,
 }) => {
   const {
     data,
@@ -54,7 +61,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
     ytdNet,
     selectedYear,
     selectedMonth,
+    isCurrentYearClosed,
     isDemoData,
+    isDriveConnected,
+    exportJsonFile,
   } = useChurchFinance();
 
   const currency = data.profile.currencySymbol || '₱';
@@ -167,7 +177,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={onOpenRecordCollection}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
+            disabled={isCurrentYearClosed}
+            title={isCurrentYearClosed ? `Fiscal Year ${selectedYear} is closed` : 'Record new offering'}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
           >
             <PlusCircle className="w-4 h-4" />
             <span>Record Offering</span>
@@ -175,7 +187,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           <button
             onClick={onOpenRecordExpense}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
+            disabled={isCurrentYearClosed}
+            title={isCurrentYearClosed ? `Fiscal Year ${selectedYear} is closed` : 'Record new disbursement'}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
           >
             <ArrowDownRight className="w-4 h-4 text-rose-400" />
             <span>Disburse Expense</span>
@@ -183,7 +197,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           <button
             onClick={onOpenTransfer}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 transition-colors"
+            disabled={isCurrentYearClosed}
+            title={isCurrentYearClosed ? `Fiscal Year ${selectedYear} is closed` : 'Record inter-fund transfer'}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 transition-colors"
           >
             <Wallet className="w-3.5 h-3.5 text-slate-500" />
             <span>Transfer Funds</span>
@@ -295,6 +311,106 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </button>
         </div>
       )}
+
+      {/* Live Church Rollout & Governance Readiness Bar */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-blue-600" />
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              Live Church Rollout & Internal Control Readiness
+            </h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={exportJsonFile}
+              className="text-[11px] font-semibold text-slate-600 hover:text-slate-900 inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 transition-colors"
+              title="Download instant offline JSON backup"
+            >
+              <Download className="w-3 h-3" />
+              <span>Download Offline Backup</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+          {/* 1. Church Profile & Dual Auditors */}
+          <button
+            type="button"
+            onClick={onOpenProfile}
+            className="text-left p-2.5 rounded-lg border border-slate-200/80 hover:border-blue-300 bg-slate-50/70 hover:bg-blue-50/30 transition-colors flex items-start justify-between gap-2"
+          >
+            <div>
+              <span className="font-semibold text-slate-800 block text-[11px]">1. Church Profile & Signees</span>
+              <span className="text-[10px] text-slate-500 block mt-0.5 truncate max-w-[180px]">
+                {data.profile.name} • {data.profile.auditor1 && data.profile.auditor2 ? '2 Auditors Set' : 'Set Auditors'}
+              </span>
+            </div>
+            <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+          </button>
+
+          {/* 2. Ledger Mode */}
+          <button
+            type="button"
+            onClick={onOpenDataMode}
+            className={`text-left p-2.5 rounded-lg border transition-colors flex items-start justify-between gap-2 ${
+              !isDemoData
+                ? 'border-emerald-200 bg-emerald-50/40 hover:bg-emerald-50'
+                : 'border-amber-200 bg-amber-50/50 hover:bg-amber-50'
+            }`}
+          >
+            <div>
+              <span className="font-semibold text-slate-800 block text-[11px]">2. Ledger Operating Mode</span>
+              <span className="text-[10px] text-slate-600 block mt-0.5">
+                {!isDemoData ? 'Live Production Ledger Active' : 'Sample Mode (Click to Go Live)'}
+              </span>
+            </div>
+            {!isDemoData ? (
+              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            ) : (
+              <Rocket className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            )}
+          </button>
+
+          {/* 3. Fund vs Bank Golden Rule */}
+          <button
+            type="button"
+            onClick={() => onNavigate('funds')}
+            className={`text-left p-2.5 rounded-lg border transition-colors flex items-start justify-between gap-2 ${
+              isReconciled
+                ? 'border-emerald-200 bg-emerald-50/40 hover:bg-emerald-50'
+                : 'border-rose-200 bg-rose-50/50 hover:bg-rose-50'
+            }`}
+          >
+            <div>
+              <span className="font-semibold text-slate-800 block text-[11px]">3. Bank & Fund Balance</span>
+              <span className="text-[10px] text-slate-600 block mt-0.5">
+                {isReconciled ? 'Golden Rule Reconciled (₱0.00 diff)' : `Variance: ${currency}${Math.abs(reconciliationDifference).toLocaleString()}`}
+              </span>
+            </div>
+            {isReconciled ? (
+              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            )}
+          </button>
+
+          {/* 4. Cloud Backup & Dual Custody */}
+          <button
+            type="button"
+            onClick={onOpenDrive}
+            className="text-left p-2.5 rounded-lg border border-slate-200/80 hover:border-blue-300 bg-slate-50/70 hover:bg-blue-50/30 transition-colors flex items-start justify-between gap-2"
+          >
+            <div>
+              <span className="font-semibold text-slate-800 block text-[11px]">4. Cloud Sync & Backup</span>
+              <span className="text-[10px] text-slate-500 block mt-0.5">
+                {isDriveConnected ? 'Google Drive Connected' : 'Local Storage (Click for Drive Sync)'}
+              </span>
+            </div>
+            <Cloud className={`w-4 h-4 shrink-0 mt-0.5 ${isDriveConnected ? 'text-emerald-600' : 'text-blue-500'}`} />
+          </button>
+        </div>
+      </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

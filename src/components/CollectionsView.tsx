@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Plus,
   Search,
@@ -15,6 +15,9 @@ import {
   CreditCard,
   Banknote,
   Upload,
+  Download,
+  Lock,
+  ShieldCheck,
 } from 'lucide-react';
 import { useChurchFinance } from '../context/ChurchFinanceContext';
 import { CollectionItem, ServiceType, CashBreakdown } from '../types/finance';
@@ -38,13 +41,19 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
     deleteCollection,
     selectedYear,
     selectedMonth,
+    isCurrentYearClosed,
+    isSelectedMonthApproved,
+    isMonthApproved,
     requestUserConfirmation,
   } = useChurchFinance();
 
   const currency = data.profile.currencySymbol || '₱';
+  const monthPrefix = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
+  const monthName = new Date(selectedYear, selectedMonth - 1).toLocaleString('default', { month: 'long' });
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
+  const [periodFilter, setPeriodFilter] = useState<'all' | 'month'>('all');
   const [selectedFundFilter, setSelectedFundFilter] = useState('all');
   const [selectedServiceFilter, setSelectedServiceFilter] = useState('all');
 
@@ -100,8 +109,7 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
     return computedCashTotal + Number(formChecksAmount || 0) + Number(formDigitalAmount || 0);
   }, [computedCashTotal, formChecksAmount, formDigitalAmount]);
 
-  const openNewModal = () => {
-    setEditingItem(null);
+  const initializeNewForm = () => {
     const today = new Date().toISOString().split('T')[0];
     setFormDate(today);
     setFormService('sunday_morning');
@@ -126,6 +134,18 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
     setFormCounter1(data.profile.auditor1 || '');
     setFormCounter2(data.profile.auditor2 || '');
     setFormNotes('');
+  };
+
+  // Ensure form defaults are populated if modal is opened directly from Dashboard quick action
+  useEffect(() => {
+    if (isModalOpen && !editingItem) {
+      initializeNewForm();
+    }
+  }, [isModalOpen]);
+
+  const openNewModal = () => {
+    setEditingItem(null);
+    initializeNewForm();
     setIsModalOpen(true);
   };
 
@@ -197,6 +217,7 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
         notes: formNotes,
       });
     }
+    setEditingItem(null);
     setIsModalOpen(false);
   };
 
@@ -209,12 +230,58 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
         col.notes?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         col.counters.some((c) => c.toLowerCase().includes(searchQuery.toLowerCase()));
 
+      const matchesPeriod = periodFilter === 'all' || col.date.startsWith(monthPrefix);
       const matchesFund = selectedFundFilter === 'all' || col.fundId === selectedFundFilter;
       const matchesService = selectedServiceFilter === 'all' || col.serviceType === selectedServiceFilter;
 
-      return matchesSearch && matchesFund && matchesService;
+      return matchesSearch && matchesPeriod && matchesFund && matchesService;
     });
-  }, [data.collections, searchQuery, selectedFundFilter, selectedServiceFilter]);
+  }, [data.collections, searchQuery, periodFilter, monthPrefix, selectedFundFilter, selectedServiceFilter]);
+
+  const handleExportCollectionsCsv = () => {
+    const headers = [
+      'Date',
+      'Service Type',
+      'Batch Number',
+      'Category',
+      'Fund',
+      'Bank Account',
+      'Cash Amount',
+      'Checks Amount',
+      'Digital Amount',
+      'Total Offering',
+      'First Auditor/Counter',
+      'Second Auditor/Counter',
+      'Notes',
+    ];
+    const rows = filteredCollections.map((c) => {
+      const fundName = data.funds.find((f) => f.id === c.fundId)?.name || c.fundId;
+      const acctName = data.accounts.find((a) => a.id === c.accountId)?.name || c.accountId;
+      return [
+        c.date,
+        c.serviceType,
+        `"${(c.batchNumber || '').replace(/"/g, '""')}"`,
+        `"${c.category.replace(/"/g, '""')}"`,
+        `"${fundName.replace(/"/g, '""')}"`,
+        `"${acctName.replace(/"/g, '""')}"`,
+        c.cashAmount.toFixed(2),
+        c.checksAmount.toFixed(2),
+        c.digitalAmount.toFixed(2),
+        c.totalAmount.toFixed(2),
+        `"${(c.counters[0] || '').replace(/"/g, '""')}"`,
+        `"${(c.counters[1] || '').replace(/"/g, '""')}"`,
+        `"${(c.notes || '').replace(/"/g, '""')}"`,
+      ].join(',');
+    });
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `church_collections_${periodFilter === 'month' ? monthPrefix : selectedYear}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Aggregate stats
   const totalCollections = useMemo(() => {
@@ -235,6 +302,29 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
 
   return (
     <div className="space-y-6 pb-12">
+      <div className={countSlipItem ? 'print:hidden space-y-6' : 'space-y-6'}>
+      {/* Audit Lock Banner when Year is Closed or Month Report is Approved */}
+      {(isCurrentYearClosed || isSelectedMonthApproved) && (
+        <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5">
+            <Lock className="w-4 h-4 text-amber-700 shrink-0" />
+            <span>
+              {isCurrentYearClosed ? (
+                <>
+                  <strong>Fiscal Year {selectedYear} is Closed & Audited:</strong> Modifying historical collection records is restricted to preserve year-end rolled-forward balances.
+                </>
+              ) : (
+                <>
+                  <strong>{monthName} {selectedYear} Board Report is Approved:</strong> Collection records in {monthName} have been formally approved by the Elder Board. Any edits will require audit confirmation.
+                </>
+              )}
+            </span>
+          </div>
+          <span className="px-2.5 py-0.5 rounded-full bg-amber-200/80 text-amber-900 font-semibold text-[10px] uppercase shrink-0">
+            Audit Protected
+          </span>
+        </div>
+      )}
       {/* Top Header & Metrics */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs">
         <div>
@@ -245,7 +335,15 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
             Sunday count sheets, designated envelopes, dual-counter verification, and fund allocation
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleExportCollectionsCsv}
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 transition-colors shadow-xs"
+            title="Export filtered collections to CSV"
+          >
+            <Download className="w-3.5 h-3.5 text-slate-600" />
+            <span>Export CSV</span>
+          </button>
           {onOpenImport && (
             <button
               onClick={onOpenImport}
@@ -257,7 +355,8 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
           )}
           <button
             onClick={openNewModal}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
+            disabled={isCurrentYearClosed}
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
           >
             <Plus className="w-4 h-4" />
             <span>Record New Offering</span>
@@ -315,7 +414,33 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Period Toggle */}
+          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-xs">
+            <button
+              type="button"
+              onClick={() => setPeriodFilter('month')}
+              className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+                periodFilter === 'month'
+                  ? 'bg-white text-emerald-700 shadow-2xs font-semibold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              {monthName} {selectedYear}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPeriodFilter('all')}
+              className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+                periodFilter === 'all'
+                  ? 'bg-white text-emerald-700 shadow-2xs font-semibold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Full Year ({selectedYear} YTD)
+            </button>
+          </div>
+
           {/* Fund Filter */}
           <select
             value={selectedFundFilter}
@@ -432,25 +557,43 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
                             <Printer className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => openEditModal(item)}
+                            onClick={() => {
+                              if (isMonthApproved(item.date)) {
+                                requestUserConfirmation({
+                                  title: 'Edit Collection in Approved Month?',
+                                  message: `The Board Report for ${item.date.slice(0, 7)} has already been marked as Approved. Are you sure you want to unlock and edit this collection record?`,
+                                  affectedItem: `${item.category} (${item.date})`,
+                                  confirmLabel: 'Unlock & Edit',
+                                  isDestructive: false,
+                                  onConfirm: () => openEditModal(item),
+                                });
+                              } else {
+                                openEditModal(item);
+                              }
+                            }}
+                            disabled={isCurrentYearClosed}
                             title="Edit Record"
-                            className="p-1 text-slate-500 hover:text-amber-600 rounded hover:bg-slate-100"
+                            className="p-1 text-slate-500 hover:text-amber-600 disabled:opacity-40 rounded hover:bg-slate-100"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => {
+                              const approvedNote = isMonthApproved(item.date)
+                                ? ' NOTE: This record belongs to an Elder Board Approved monthly report!'
+                                : '';
                               requestUserConfirmation({
                                 title: 'Delete Collection Record?',
-                                message: `Delete the ${currency}${item.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })} collection from ${item.date}? Target fund and bank account balances will be adjusted automatically.`,
+                                message: `Delete the ${currency}${item.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })} collection from ${item.date}? Target fund and bank account balances will be adjusted automatically.${approvedNote}`,
                                 affectedItem: `${item.category} (${item.date})`,
                                 confirmLabel: 'Delete Collection',
                                 isDestructive: true,
                                 onConfirm: () => deleteCollection(item.id),
                               });
                             }}
+                            disabled={isCurrentYearClosed}
                             title="Delete Record"
-                            className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-slate-100"
+                            className="p-1 text-slate-400 hover:text-rose-600 disabled:opacity-40 rounded hover:bg-slate-100"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -464,10 +607,11 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
           </table>
         </div>
       </div>
+      </div>
 
       {/* RECORD / EDIT OFFERING MODAL with SUNDAY COUNT SHEET */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150 print:hidden">
           <div className="w-full max-w-2xl bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <div className="flex items-center gap-2.5">
@@ -482,7 +626,10 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
                 </div>
               </div>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setEditingItem(null);
+                  setIsModalOpen(false);
+                }}
                 className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200/60"
               >
                 <X className="w-5 h-5" />
@@ -543,6 +690,9 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
                       {cat}
                     </option>
                   ))}
+                  {!((data.categories?.collectionCategories || DEFAULT_COLLECTION_CATEGORIES).includes(formCategory)) && formCategory && (
+                    <option value={formCategory}>{formCategory} (Custom)</option>
+                  )}
                 </select>
               </div>
 
@@ -783,7 +933,10 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
               <div className="pt-3 border-t border-slate-200 flex justify-end gap-2.5">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => {
+                    setEditingItem(null);
+                    setIsModalOpen(false);
+                  }}
                   className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50 transition-colors"
                 >
                   Cancel
@@ -802,9 +955,9 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
 
       {/* PRINTABLE SUNDAY COUNT SLIP MODAL */}
       {countSlipItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="w-full max-w-lg bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs print:static print:inset-auto print:bg-transparent print:p-0">
+          <div className="w-full max-w-lg bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] print:max-w-none print:max-h-none print:border-slate-400 print:shadow-none">
+            <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50 print:hidden">
               <span className="font-bold text-slate-800 text-sm">Official Sunday Offering Verification Slip</span>
               <button
                 onClick={() => setCountSlipItem(null)}
@@ -871,7 +1024,7 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
               </div>
             </div>
 
-            <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+            <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2 print:hidden">
               <button
                 onClick={() => window.print()}
                 className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-lg flex items-center gap-1.5 transition-colors"

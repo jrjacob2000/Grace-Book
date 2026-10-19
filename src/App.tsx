@@ -83,6 +83,8 @@ const AppContent: React.FC = () => {
               setIsImportModalOpen(true);
             }}
             onOpenDataMode={() => setIsDataModeModalOpen(true)}
+            onOpenProfile={() => setIsProfileModalOpen(true)}
+            onOpenDrive={() => setIsDriveModalOpen(true)}
           />
         )}
 

@@ -8,6 +8,10 @@ import {
   Save,
   Calculator,
   RefreshCw,
+  ShieldCheck,
+  Lock,
+  Unlock,
+  FileCheck2,
 } from 'lucide-react';
 import { useChurchFinance } from '../context/ChurchFinanceContext';
 import { BoardReportMeta, FoursquareRemittanceSummary } from '../types/finance';
@@ -93,6 +97,7 @@ export const BoardReportView: React.FC = () => {
   const totalBeginning = useMemo(() => fundRows.reduce((acc, f) => acc + f.beginningBalance, 0), [fundRows]);
   const totalReceipts = useMemo(() => fundRows.reduce((acc, f) => acc + f.receipts, 0), [fundRows]);
   const totalDisbursements = useMemo(() => fundRows.reduce((acc, f) => acc + f.disbursements, 0), [fundRows]);
+  const totalNetTransfers = useMemo(() => fundRows.reduce((acc, f) => acc + f.netTransfer, 0), [fundRows]);
   const totalEnding = useMemo(() => fundRows.reduce((acc, f) => acc + f.endingBalance, 0), [fundRows]);
 
   // Base receipts for Remittance formulas
@@ -123,7 +128,13 @@ export const BoardReportView: React.FC = () => {
   }, [fundRows]);
 
   const gffReceipts = useMemo(() => {
-    const f = fundRows.find((r) => r.id === 'fund-gff' || r.name.toLowerCase().includes('gff'));
+    const f = fundRows.find(
+      (r) =>
+        r.id === 'fund-youth' ||
+        r.id === 'fund-gff' ||
+        r.name.toLowerCase().includes('youth') ||
+        r.name.toLowerCase().includes('gff')
+    );
     return f ? f.receipts : 0;
   }, [fundRows]);
 
@@ -133,7 +144,13 @@ export const BoardReportView: React.FC = () => {
   }, [fundRows]);
 
   const ufmReceipts = useMemo(() => {
-    const f = fundRows.find((r) => r.id === 'fund-ufm' || r.name.toLowerCase().includes('ufm'));
+    const f = fundRows.find(
+      (r) =>
+        r.id === 'fund-ministries' ||
+        r.id === 'fund-ufm' ||
+        r.name.toLowerCase().includes('ministries') ||
+        r.name.toLowerCase().includes('ufm')
+    );
     return f ? f.receipts : 0;
   }, [fundRows]);
 
@@ -165,10 +182,10 @@ export const BoardReportView: React.FC = () => {
     month: selectedMonth,
     year: selectedYear,
     preparedBy: data.profile.treasurer || 'Hannah L. Collins',
-    presentedDate: `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-31`,
+    presentedDate: `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-28`,
     boardChairNotes: '',
     treasurerComments: '',
-    motionStatus: 'approved',
+    motionStatus: 'draft',
   };
 
   const savedRemittance: FoursquareRemittanceSummary = savedReportMeta.remittance || {};
@@ -347,17 +364,17 @@ export const BoardReportView: React.FC = () => {
       `"Pastor:","${data.profile.seniorPastor}"`,
       `"MONTHLY CHURCH FINANCIAL REPORT"`,
       `"${monthName.toUpperCase()} ${selectedYear}"`,
-      `"","Beginning Balance","Receipts","Disbursements","Ending Balance"`,
+      `"","Beginning Balance","Receipts","Disbursements","Net Transfers","Ending Balance"`,
     ];
 
     fundRows.forEach((r) => {
       lines.push(
-        `"${r.name}",${r.beginningBalance ? r.beginningBalance.toFixed(2) : '-'},${r.receipts ? r.receipts.toFixed(2) : '-'},${r.disbursements ? r.disbursements.toFixed(2) : '-'},${r.endingBalance ? r.endingBalance.toFixed(2) : '-'}`
+        `"${r.name}",${r.beginningBalance ? r.beginningBalance.toFixed(2) : '-'},${r.receipts ? r.receipts.toFixed(2) : '-'},${r.disbursements ? r.disbursements.toFixed(2) : '-'},${r.netTransfer ? r.netTransfer.toFixed(2) : '-'},${r.endingBalance ? r.endingBalance.toFixed(2) : '-'}`
       );
     });
 
     lines.push(
-      `"Totals:",${totalBeginning.toFixed(2)},${totalReceipts.toFixed(2)},${totalDisbursements.toFixed(2)},${totalEnding.toFixed(2)}`
+      `"Totals:",${totalBeginning.toFixed(2)},${totalReceipts.toFixed(2)},${totalDisbursements.toFixed(2)},${totalNetTransfers.toFixed(2)},${totalEnding.toFixed(2)}`
     );
 
     lines.push(`""`);
@@ -457,6 +474,125 @@ REMITTANCE SUMMARY:
         </div>
       </div>
 
+      {/* BOARD GOVERNANCE APPROVAL & PERIOD AUDIT LOCK BAR (Hidden when printing) */}
+      <div
+        className={`print:hidden p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
+          savedReportMeta.motionStatus === 'approved'
+            ? 'bg-emerald-50/80 border-emerald-300 text-emerald-950'
+            : savedReportMeta.motionStatus === 'presented'
+            ? 'bg-blue-50/80 border-blue-200 text-blue-950'
+            : 'bg-white border-slate-200/80 text-slate-800'
+        }`}
+      >
+        <div className="flex items-start sm:items-center gap-3">
+          <div
+            className={`p-2 rounded-lg shrink-0 ${
+              savedReportMeta.motionStatus === 'approved'
+                ? 'bg-emerald-100 text-emerald-700'
+                : savedReportMeta.motionStatus === 'presented'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-slate-100 text-slate-600'
+            }`}
+          >
+            {savedReportMeta.motionStatus === 'approved' ? (
+              <Lock className="w-4 h-4" />
+            ) : (
+              <FileCheck2 className="w-4 h-4" />
+            )}
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-slate-900">
+                {monthName} {selectedYear} Board Governance Status:
+              </span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  savedReportMeta.motionStatus === 'approved'
+                    ? 'bg-emerald-200 text-emerald-900'
+                    : savedReportMeta.motionStatus === 'presented'
+                    ? 'bg-blue-200 text-blue-900'
+                    : savedReportMeta.motionStatus === 'amended'
+                    ? 'bg-amber-200 text-amber-900'
+                    : 'bg-slate-200 text-slate-700'
+                }`}
+              >
+                {savedReportMeta.motionStatus === 'approved'
+                  ? 'Approved & Audit Locked'
+                  : savedReportMeta.motionStatus === 'presented'
+                  ? 'Presented to Board'
+                  : savedReportMeta.motionStatus === 'amended'
+                  ? 'Amended'
+                  : 'Working Draft'}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-600 mt-0.5">
+              {savedReportMeta.motionStatus === 'approved'
+                ? `Approved on ${savedReportMeta.approvedDate || savedReportMeta.presentedDate} by ${
+                    savedReportMeta.approvalSignees || 'Elder & Deacon Board'
+                  }. Transactions in ${monthName} are protected against accidental edits.`
+                : `Once the Church Council / Board approves the ${monthName} financial statement, lock the period to protect historical figures.`}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <select
+            value={savedReportMeta.motionStatus}
+            onChange={(e) => {
+              const newStatus = e.target.value as BoardReportMeta['motionStatus'];
+              updateBoardReportMeta(monthKey, {
+                motionStatus: newStatus,
+                approvedDate:
+                  newStatus === 'approved'
+                    ? new Date().toISOString().split('T')[0]
+                    : savedReportMeta.approvedDate,
+                approvalSignees:
+                  newStatus === 'approved'
+                    ? savedReportMeta.approvalSignees ||
+                      `${data.profile.boardChair || 'Board Chair'} & ${data.profile.auditor1 || 'Auditor'}`
+                    : savedReportMeta.approvalSignees,
+              });
+            }}
+            className="text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 cursor-pointer"
+          >
+            <option value="draft">Status: Working Draft</option>
+            <option value="presented">Status: Presented to Board</option>
+            <option value="approved">Status: Approved & Locked</option>
+            <option value="amended">Status: Amended</option>
+          </select>
+
+          {savedReportMeta.motionStatus !== 'approved' ? (
+            <button
+              onClick={() =>
+                updateBoardReportMeta(monthKey, {
+                  motionStatus: 'approved',
+                  approvedDate: new Date().toISOString().split('T')[0],
+                  approvalSignees: `${data.profile.boardChair || 'Board Chair'}, ${
+                    data.profile.seniorPastor || 'Senior Pastor'
+                  } & ${data.profile.auditor1 || 'Auditor'}`,
+                })
+              }
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-colors shadow-2xs"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Approve & Lock Month</span>
+            </button>
+          ) : (
+            <button
+              onClick={() =>
+                updateBoardReportMeta(monthKey, {
+                  motionStatus: 'draft',
+                })
+              }
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-medium rounded-lg transition-colors"
+            >
+              <Unlock className="w-3.5 h-3.5 text-amber-600" />
+              <span>Unlock Period</span>
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* EDIT REMITTANCE VALUES PANEL (Hidden when printing) */}
       {isEditingRemittance && (
         <div className="print:hidden bg-slate-50 p-5 rounded-xl border border-slate-300 shadow-inner space-y-4 text-xs">
@@ -464,7 +600,7 @@ REMITTANCE SUMMARY:
             <div className="flex items-center gap-2">
               <Calculator className="w-4 h-4 text-blue-600" />
               <h3 className="font-bold text-slate-900 text-sm">
-                Foursquare Remittance Quotas & Offsets Editor ({monthName} {selectedYear})
+                Denominational &amp; District Remittance Editor ({monthName} {selectedYear})
               </h3>
             </div>
             <button
@@ -556,7 +692,7 @@ REMITTANCE SUMMARY:
                     />
                   </div>
                   <div>
-                    <label className="text-slate-600 block">Credencial Fee (100%)</label>
+                    <label className="text-slate-600 block">Credential Fee (100%)</label>
                     <input
                       type="number"
                       step="0.01"
@@ -686,7 +822,7 @@ REMITTANCE SUMMARY:
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-slate-600 block">Foursquare Bible College (FBC)</label>
+                    <label className="text-slate-600 block">Bible College &amp; Seminary Support</label>
                     <input
                       type="number"
                       step="0.01"
@@ -769,6 +905,7 @@ REMITTANCE SUMMARY:
                 <th className="py-1.5 px-3 border-r border-slate-400 text-right whitespace-nowrap">Beginning Balance</th>
                 <th className="py-1.5 px-3 border-r border-slate-400 text-right whitespace-nowrap">Receipts</th>
                 <th className="py-1.5 px-3 border-r border-slate-400 text-right whitespace-nowrap">Disbursements</th>
+                <th className="py-1.5 px-3 border-r border-slate-400 text-right whitespace-nowrap">Net Transfers</th>
                 <th className="py-1.5 px-3 text-right whitespace-nowrap">Ending Balance</th>
               </tr>
             </thead>
@@ -786,6 +923,11 @@ REMITTANCE SUMMARY:
                   </td>
                   <td className="py-1 px-3 border-r border-slate-300 text-right text-slate-700 whitespace-nowrap">
                     {formatCell(r.disbursements)}
+                  </td>
+                  <td className={`py-1 px-3 border-r border-slate-300 text-right whitespace-nowrap ${
+                    r.netTransfer > 0 ? 'text-emerald-700' : r.netTransfer < 0 ? 'text-rose-700' : 'text-slate-700'
+                  }`}>
+                    {r.netTransfer > 0 ? `+${formatCell(r.netTransfer)}` : formatCell(r.netTransfer)}
                   </td>
                   <td className="py-1 px-3 text-right font-medium text-slate-900 whitespace-nowrap">
                     {formatCell(r.endingBalance)}
@@ -806,6 +948,9 @@ REMITTANCE SUMMARY:
                 </td>
                 <td className="py-1.5 px-3 border-r border-slate-400 text-right font-mono whitespace-nowrap">
                   {formatCell(totalDisbursements)}
+                </td>
+                <td className="py-1.5 px-3 border-r border-slate-400 text-right font-mono whitespace-nowrap">
+                  {formatCell(totalNetTransfers)}
                 </td>
                 <td className="py-1.5 px-3 text-right font-mono whitespace-nowrap">
                   {formatCell(totalEnding)}
@@ -893,7 +1038,7 @@ REMITTANCE SUMMARY:
 
                   <div className="flex items-center justify-between py-1 px-2.5 gap-2">
                     <div className="flex items-baseline gap-1.5 flex-1 min-w-0">
-                      <span className="font-medium text-slate-800 whitespace-nowrap">Credencial Fee</span>
+                      <span className="font-medium text-slate-800 whitespace-nowrap">Credential Fee</span>
                       <span className="text-[10px] text-slate-500 whitespace-nowrap">(100% to Nat'l Off.)</span>
                     </div>
                     <span className="shrink-0 text-right font-mono text-slate-700 whitespace-nowrap">

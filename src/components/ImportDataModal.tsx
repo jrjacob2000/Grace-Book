@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import {
   Upload,
   X,
@@ -22,6 +22,7 @@ import {
   ExpenseItem,
   ServiceType,
   PaymentMethod,
+  ExpenseStatus,
 } from '../types/finance';
 
 interface ImportDataModalProps {
@@ -93,6 +94,28 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
   const [expensesFallbackAccount, setExpensesFallbackAccount] = useState(data.accounts[0]?.id || '');
   const [expensesFeedback, setExpensesFeedback] = useState<string | null>(null);
 
+  // Sync activeTab with initialTab and reset transient feedback whenever modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+      setCollectionsFeedback(null);
+      setExpensesFeedback(null);
+      setJsonError(null);
+      if (!collectionsFallbackFund && data.funds[0]?.id) {
+        setCollectionsFallbackFund(data.funds[0].id);
+      }
+      if (!collectionsFallbackAccount && data.accounts[0]?.id) {
+        setCollectionsFallbackAccount(data.accounts[0].id);
+      }
+      if (!expensesFallbackFund && data.funds[0]?.id) {
+        setExpensesFallbackFund(data.funds[0].id);
+      }
+      if (!expensesFallbackAccount && data.accounts[0]?.id) {
+        setExpensesFallbackAccount(data.accounts[0].id);
+      }
+    }
+  }, [isOpen, initialTab, data.funds, data.accounts, collectionsFallbackFund, collectionsFallbackAccount, expensesFallbackFund, expensesFallbackAccount]);
+
   const fileInputRefJson = useRef<HTMLInputElement>(null);
   const fileInputRefCollections = useRef<HTMLInputElement>(null);
   const fileInputRefExpenses = useRef<HTMLInputElement>(null);
@@ -149,15 +172,47 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
 
     const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase());
     const dateIdx = headers.findIndex((h) => h.includes('date'));
-    const amountIdx = headers.findIndex((h) => h.includes('amount') || h.includes('total'));
-    const categoryIdx = headers.findIndex((h) => h.includes('category') || h.includes('type') || h.includes('offering'));
+    const serviceIdx = headers.findIndex((h) => h.includes('service'));
+    const batchIdx = headers.findIndex((h) => h.includes('batch'));
+    const totalOfferingIdx = headers.findIndex((h) => h.includes('total'));
+    const amountIdx =
+      totalOfferingIdx >= 0
+        ? totalOfferingIdx
+        : headers.findIndex(
+            (h) =>
+              h.includes('amount') &&
+              !h.includes('cash') &&
+              !h.includes('check') &&
+              !h.includes('digital')
+          );
+    const categoryIdx = headers.findIndex(
+      (h) => h.includes('category') || (h.includes('offering') && !h.includes('total'))
+    );
     const fundIdx = headers.findIndex((h) => h.includes('fund'));
     const accountIdx = headers.findIndex((h) => h.includes('account') || h.includes('bank'));
-    const cashIdx = headers.findIndex((h) => h.includes('cash'));
+    const cashIdx = headers.findIndex((h) => h.includes('cash') && !h.includes('gcash'));
     const checksIdx = headers.findIndex((h) => h.includes('check'));
     const digitalIdx = headers.findIndex((h) => h.includes('digital') || h.includes('online') || h.includes('gcash'));
-    const countersIdx = headers.findIndex((h) => h.includes('counter') || h.includes('teller') || h.includes('auditor'));
-    const notesIdx = headers.findIndex((h) => h.includes('note') || h.includes('memo') || h.includes('batch'));
+    const counter1Idx = headers.findIndex((h) => h.includes('first auditor') || h.includes('counter 1'));
+    const counter2Idx = headers.findIndex((h) => h.includes('second auditor') || h.includes('counter 2'));
+    const countersIdx = headers.findIndex(
+      (h) =>
+        (h.includes('counter') || h.includes('teller') || h.includes('auditor')) &&
+        !h.includes('first') &&
+        !h.includes('second')
+    );
+    const notesIdx = headers.findIndex((h) => h.includes('note') || h.includes('memo'));
+
+    const validServices: ServiceType[] = [
+      'sunday_morning',
+      'sunday_evening',
+      'midweek_prayer',
+      'youth_service',
+      'special_event',
+      'online_giving',
+      'mail_in',
+      'other',
+    ];
 
     const items: Array<Omit<CollectionItem, 'id' | 'createdAt'>> = [];
 
@@ -168,12 +223,27 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
       const rawDate = dateIdx >= 0 ? cols[dateIdx] : new Date().toISOString().split('T')[0];
       const date = rawDate && rawDate.match(/^\d{4}-\d{2}-\d{2}$/) ? rawDate : new Date().toISOString().split('T')[0];
 
-      const rawAmount = amountIdx >= 0 ? cols[amountIdx].replace(/[^0-9.-]/g, '') : '0';
-      const totalAmount = parseFloat(rawAmount) || 0;
+      const checksAmount = checksIdx >= 0 && cols[checksIdx] ? parseFloat(cols[checksIdx].replace(/[^0-9.-]/g, '')) || 0 : 0;
+      const digitalAmount = digitalIdx >= 0 && cols[digitalIdx] ? parseFloat(cols[digitalIdx].replace(/[^0-9.-]/g, '')) || 0 : 0;
+
+      const rawAmount = amountIdx >= 0 && cols[amountIdx] ? cols[amountIdx].replace(/[^0-9.-]/g, '') : '0';
+      let totalAmount = parseFloat(rawAmount) || 0;
+
+      let cashAmount = 0;
+      if (cashIdx >= 0 && cols[cashIdx] !== undefined && cols[cashIdx] !== '') {
+        const parsedCash = parseFloat(cols[cashIdx].replace(/[^0-9.-]/g, ''));
+        cashAmount = Number.isNaN(parsedCash) ? Math.max(0, totalAmount - checksAmount - digitalAmount) : parsedCash;
+      } else {
+        cashAmount = Math.max(0, totalAmount - checksAmount - digitalAmount);
+      }
+
+      if (totalAmount <= 0 && cashAmount + checksAmount + digitalAmount > 0) {
+        totalAmount = cashAmount + checksAmount + digitalAmount;
+      }
       if (totalAmount <= 0) continue;
 
       // Matching fund
-      let fundId = collectionsFallbackFund;
+      let fundId = collectionsFallbackFund || data.funds[0]?.id || '';
       if (fundIdx >= 0 && cols[fundIdx]) {
         const query = cols[fundIdx].toLowerCase().trim();
         const matched = data.funds.find(
@@ -186,7 +256,7 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
       }
 
       // Matching account
-      let accountId = collectionsFallbackAccount;
+      let accountId = collectionsFallbackAccount || data.accounts[0]?.id || '';
       if (accountIdx >= 0 && cols[accountIdx]) {
         const query = cols[accountIdx].toLowerCase().trim();
         const matched = data.accounts.find(
@@ -198,18 +268,40 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
         if (matched) accountId = matched.id;
       }
 
-      const category = categoryIdx >= 0 && cols[categoryIdx] ? cols[categoryIdx] : 'Tithes & Offerings';
-      const cashAmount = cashIdx >= 0 ? parseFloat(cols[cashIdx].replace(/[^0-9.-]/g, '')) || totalAmount : totalAmount;
-      const checksAmount = checksIdx >= 0 ? parseFloat(cols[checksIdx].replace(/[^0-9.-]/g, '')) || 0 : 0;
-      const digitalAmount = digitalIdx >= 0 ? parseFloat(cols[digitalIdx].replace(/[^0-9.-]/g, '')) || 0 : 0;
-      const counters = countersIdx >= 0 && cols[countersIdx]
-        ? cols[countersIdx].split(/[,;/]/).map((c) => c.trim()).filter(Boolean)
-        : ['Finance Team'];
-      const notes = notesIdx >= 0 ? cols[notesIdx] : 'Imported via CSV';
+      let serviceType: ServiceType = 'sunday_morning';
+      if (serviceIdx >= 0 && cols[serviceIdx]) {
+        const normalizedService = cols[serviceIdx].toLowerCase().trim().replace(/\s+/g, '_') as ServiceType;
+        if (validServices.includes(normalizedService)) {
+          serviceType = normalizedService;
+        }
+      }
+
+      const batchNumber = batchIdx >= 0 && cols[batchIdx] ? cols[batchIdx] : undefined;
+      const category = categoryIdx >= 0 && cols[categoryIdx] ? cols[categoryIdx] : 'Tithes & General Offerings';
+
+      let counters: string[] = [];
+      if (counter1Idx >= 0 || counter2Idx >= 0) {
+        counters = [
+          counter1Idx >= 0 ? cols[counter1Idx] : '',
+          counter2Idx >= 0 ? cols[counter2Idx] : '',
+        ]
+          .map((c) => c?.trim())
+          .filter(Boolean);
+      } else if (countersIdx >= 0 && cols[countersIdx]) {
+        counters = cols[countersIdx]
+          .split(/[,;/]/)
+          .map((c) => c.trim())
+          .filter(Boolean);
+      }
+      if (counters.length === 0) {
+        counters = [data.profile.auditor1 || 'First Auditor', data.profile.auditor2 || 'Second Auditor'];
+      }
+
+      const notes = notesIdx >= 0 && cols[notesIdx] ? cols[notesIdx] : 'Imported via CSV';
 
       items.push({
         date,
-        serviceType: 'sunday_morning' as ServiceType,
+        serviceType,
         fundId,
         accountId,
         category,
@@ -217,13 +309,14 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
         cashAmount,
         checksAmount,
         digitalAmount,
+        batchNumber,
         counters,
         notes,
       });
     }
 
     return items;
-  }, [collectionsCsvText, collectionsFallbackFund, collectionsFallbackAccount, data.funds, data.accounts]);
+  }, [collectionsCsvText, collectionsFallbackFund, collectionsFallbackAccount, data.funds, data.accounts, data.profile.auditor1, data.profile.auditor2]);
 
   // Handle Collections CSV File Upload
   const handleCollectionsFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -284,8 +377,10 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
     const fundIdx = headers.findIndex((h) => h.includes('fund'));
     const accountIdx = headers.findIndex((h) => h.includes('account') || h.includes('bank'));
     const methodIdx = headers.findIndex((h) => h.includes('method') || h.includes('payment'));
-    const checkNoIdx = headers.findIndex((h) => h.includes('check') || h.includes('voucher') || h.includes('ref'));
+    const checkNoIdx = headers.findIndex((h) => h.includes('check') || h.includes('voucher'));
+    const invoiceIdx = headers.findIndex((h) => h.includes('invoice') || h.includes('receipt') || h.includes('ref'));
     const descIdx = headers.findIndex((h) => h.includes('desc') || h.includes('note') || h.includes('particulars'));
+    const statusIdx = headers.findIndex((h) => h.includes('status'));
     const approvedIdx = headers.findIndex((h) => h.includes('approved') || h.includes('authoriz'));
 
     const items: Array<Omit<ExpenseItem, 'id' | 'createdAt'>> = [];
@@ -297,14 +392,14 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
       const rawDate = dateIdx >= 0 ? cols[dateIdx] : new Date().toISOString().split('T')[0];
       const date = rawDate && rawDate.match(/^\d{4}-\d{2}-\d{2}$/) ? rawDate : new Date().toISOString().split('T')[0];
 
-      const rawAmount = amountIdx >= 0 ? cols[amountIdx].replace(/[^0-9.-]/g, '') : '0';
+      const rawAmount = amountIdx >= 0 && cols[amountIdx] ? cols[amountIdx].replace(/[^0-9.-]/g, '') : '0';
       const amount = parseFloat(rawAmount) || 0;
       if (amount <= 0) continue;
 
       const payee = payeeIdx >= 0 && cols[payeeIdx] ? cols[payeeIdx] : 'Church Expense';
 
       // Fund match
-      let fundId = expensesFallbackFund;
+      let fundId = expensesFallbackFund || data.funds[0]?.id || '';
       if (fundIdx >= 0 && cols[fundIdx]) {
         const query = cols[fundIdx].toLowerCase().trim();
         const matched = data.funds.find(
@@ -317,7 +412,7 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
       }
 
       // Account match
-      let accountId = expensesFallbackAccount;
+      let accountId = expensesFallbackAccount || data.accounts[0]?.id || '';
       if (accountIdx >= 0 && cols[accountIdx]) {
         const query = cols[accountIdx].toLowerCase().trim();
         const matched = data.accounts.find(
@@ -329,11 +424,12 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
         if (matched) accountId = matched.id;
       }
 
-      const category = categoryIdx >= 0 && cols[categoryIdx] ? cols[categoryIdx] : 'Church Operations';
+      const category = categoryIdx >= 0 && cols[categoryIdx] ? cols[categoryIdx] : 'Office Supplies, Printing & Software';
       const department = deptIdx >= 0 && cols[deptIdx] ? cols[deptIdx] : 'Administration';
-      const checkNumber = checkNoIdx >= 0 ? cols[checkNoIdx] : '';
-      const description = descIdx >= 0 ? cols[descIdx] : 'Disbursement entry';
-      const approvedBy = approvedIdx >= 0 && cols[approvedIdx] ? cols[approvedIdx] : 'Church Council';
+      const checkNumber = checkNoIdx >= 0 && cols[checkNoIdx] ? cols[checkNoIdx] : '';
+      const invoiceNumber = invoiceIdx >= 0 && cols[invoiceIdx] ? cols[invoiceIdx] : '';
+      const description = descIdx >= 0 && cols[descIdx] ? cols[descIdx] : 'Disbursement entry';
+      const approvedBy = approvedIdx >= 0 && cols[approvedIdx] ? cols[approvedIdx] : 'Church Board';
 
       let paymentMethod: PaymentMethod = 'check';
       if (methodIdx >= 0 && cols[methodIdx]) {
@@ -341,6 +437,14 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
         if (m.includes('cash')) paymentMethod = 'cash';
         else if (m.includes('ach') || m.includes('transfer') || m.includes('online')) paymentMethod = 'ach_transfer';
         else if (m.includes('debit') || m.includes('card')) paymentMethod = 'debit_card';
+      }
+
+      let status: ExpenseStatus = 'cleared';
+      if (statusIdx >= 0 && cols[statusIdx]) {
+        const st = cols[statusIdx].toLowerCase().trim();
+        if (st === 'pending' || st === 'void' || st === 'cleared') {
+          status = st;
+        }
       }
 
       items.push({
@@ -353,8 +457,9 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
         accountId,
         paymentMethod,
         checkNumber,
+        invoiceNumber,
         description,
-        status: 'cleared',
+        status,
         approvedBy,
       });
     }

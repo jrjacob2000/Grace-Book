@@ -11,6 +11,7 @@ import {
   FileSpreadsheet,
   AlertCircle,
   CheckCircle2,
+  Lock,
 } from 'lucide-react';
 import { useChurchFinance } from '../context/ChurchFinanceContext';
 import { BudgetItem } from '../types/finance';
@@ -24,6 +25,7 @@ export const BudgetPlannerView: React.FC = () => {
     deleteBudgetItem,
     selectedYear,
     selectedMonth,
+    isCurrentYearClosed,
     requestUserConfirmation,
   } = useChurchFinance();
 
@@ -124,6 +126,20 @@ export const BudgetPlannerView: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
+      {isCurrentYearClosed && (
+        <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5">
+            <Lock className="w-4 h-4 text-amber-700 shrink-0" />
+            <span>
+              <strong>Fiscal Year {selectedYear} is Closed & Audited:</strong> Budget allocations for this historical year are locked.
+            </span>
+          </div>
+          <span className="px-2.5 py-0.5 rounded-full bg-amber-200/80 text-amber-900 font-semibold text-[10px] uppercase shrink-0">
+            Audit Protected
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs">
         <div>
@@ -137,14 +153,16 @@ export const BudgetPlannerView: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => openNewModal('income')}
-            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
+            disabled={isCurrentYearClosed}
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
           >
             <Plus className="w-4 h-4" />
             <span>Add Income Goal</span>
           </button>
           <button
             onClick={() => openNewModal('expense')}
-            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
+            disabled={isCurrentYearClosed}
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
           >
             <Plus className="w-4 h-4 text-blue-400" />
             <span>Add Expense Line</span>
@@ -263,7 +281,8 @@ export const BudgetPlannerView: React.FC = () => {
                       <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => openEditModal(item)}
-                          className="p-1 text-slate-400 hover:text-slate-600"
+                          disabled={isCurrentYearClosed}
+                          className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-40"
                         >
                           <Edit2 className="w-3 h-3" />
                         </button>
@@ -278,7 +297,8 @@ export const BudgetPlannerView: React.FC = () => {
                               onConfirm: () => deleteBudgetItem(item.id),
                             });
                           }}
-                          className="p-1 text-slate-400 hover:text-rose-600"
+                          disabled={isCurrentYearClosed}
+                          className="p-1 text-slate-400 hover:text-rose-600 disabled:opacity-40"
                         >
                           <Trash2 className="w-3 h-3" />
                         </button>
@@ -354,7 +374,8 @@ export const BudgetPlannerView: React.FC = () => {
                       <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => openEditModal(item)}
-                          className="p-1 text-slate-400 hover:text-slate-600"
+                          disabled={isCurrentYearClosed}
+                          className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-40"
                         >
                           <Edit2 className="w-3 h-3" />
                         </button>
@@ -369,7 +390,8 @@ export const BudgetPlannerView: React.FC = () => {
                               onConfirm: () => deleteBudgetItem(item.id),
                             });
                           }}
-                          className="p-1 text-slate-400 hover:text-rose-600"
+                          disabled={isCurrentYearClosed}
+                          className="p-1 text-slate-400 hover:text-rose-600 disabled:opacity-40"
                         >
                           <Trash2 className="w-3 h-3" />
                         </button>
