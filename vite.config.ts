@@ -5,7 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    base: '/Grace-Book/',
+    base: '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
