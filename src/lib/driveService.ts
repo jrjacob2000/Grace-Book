@@ -155,6 +155,11 @@ export async function findDriveFileForYear(
 
   if (!response.ok) {
     const errorText = await response.text();
+    if (response.status === 403 && errorText.includes('ACCESS_TOKEN_SCOPE_INSUFFICIENT')) {
+      throw new Error(
+        'Google Drive permission box was left unchecked during sign-in. Please sign out (or remove app access at myaccount.google.com/permissions), click "Connect Drive" again, and check the box to allow Google Drive file access.'
+      );
+    }
     throw new Error(`Google Drive search failed (${response.status}): ${errorText}`);
   }
 

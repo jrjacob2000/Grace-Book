@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import { User } from 'firebase/auth';
 import {
   ChurchFinancialData,
   CollectionItem,
@@ -30,10 +29,12 @@ import {
   GRACEBOOKS_FOLDER_NAME,
 } from '../lib/driveService';
 import {
+  User,
   initAuth,
   googleSignIn,
   logout as authLogout,
   getAccessToken,
+  markNeedsDriveConsentPrompt,
 } from '../lib/firebaseAuth';
 import {
   safeJsonParse,
