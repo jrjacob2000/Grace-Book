@@ -82,6 +82,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'funds', label: 'Funds & Accounts' },
     { id: 'budget', label: 'Budget Planning' },
     { id: 'board-report', label: 'Board Monthly Report', highlight: true },
+    { id: 'about', label: 'About' },
   ];
 
   return (
@@ -100,9 +101,13 @@ export const Header: React.FC<HeaderProps> = ({
                 {data.profile.name || 'Grace Fellowship Community Church'}
               </h1>
               <div className="flex items-center gap-1.5 shrink-0">
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30">
+                <button
+                  onClick={() => setActiveTab('about')}
+                  title={`About GraceBooks Church Finance (v${APP_VERSION})`}
+                  className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30 hover:bg-blue-500/30 transition-colors cursor-pointer"
+                >
                   v{APP_VERSION}
-                </span>
+                </button>
                 {isDemoData ? (
                   <button
                     onClick={onOpenDataModeModal}

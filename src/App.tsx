@@ -14,6 +14,8 @@ import { YearRolloverModal } from './components/YearRolloverModal';
 import { HelpModal } from './components/HelpModal';
 import { ImportDataModal } from './components/ImportDataModal';
 import { DataModeModal } from './components/DataModeModal';
+import { AboutView } from './components/AboutView';
+import { APP_NAME, APP_VERSION, APP_ISSUES_URL } from './constants/version';
 
 const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -120,7 +122,60 @@ const AppContent: React.FC = () => {
         {activeTab === 'budget' && <BudgetPlannerView />}
 
         {activeTab === 'board-report' && <BoardReportView />}
+
+        {activeTab === 'about' && (
+          <AboutView
+            onNavigate={(tab) => setActiveTab(tab)}
+            onOpenHelp={() => setIsHelpModalOpen(true)}
+            onOpenProfile={() => setIsProfileModalOpen(true)}
+            onOpenDataMode={() => setIsDataModeModalOpen(true)}
+            onOpenDrive={() => setIsDriveModalOpen(true)}
+          />
+        )}
       </main>
+
+      <footer className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 mt-8 border-t border-slate-200/80 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2 print:hidden">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-slate-700">{APP_NAME}</span>
+          <span>•</span>
+          <span className="font-mono text-[11px]">v{APP_VERSION}</span>
+          <span className="hidden md:inline">•</span>
+          <span className="hidden md:inline">Local-First Church Fund Accounting &amp; Stewardship</span>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+          <button
+            onClick={() => setActiveTab('about')}
+            className={`hover:text-blue-600 transition-colors cursor-pointer ${
+              activeTab === 'about' ? 'text-blue-600 font-semibold' : ''
+            }`}
+          >
+            About GraceBooks
+          </button>
+          <span>•</span>
+          <button
+            onClick={() => setIsHelpModalOpen(true)}
+            className="hover:text-blue-600 transition-colors cursor-pointer"
+          >
+            Finance Manual &amp; Help
+          </button>
+          <span>•</span>
+          <button
+            onClick={() => setIsProfileModalOpen(true)}
+            className="hover:text-blue-600 transition-colors cursor-pointer"
+          >
+            Church Profile
+          </button>
+          <span>•</span>
+          <a
+            href={APP_ISSUES_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-blue-600 transition-colors font-medium text-slate-600"
+          >
+            Report Issue / Bug
+          </a>
+        </div>
+      </footer>
 
       {/* Global Modals */}
       <ConfirmationModal />

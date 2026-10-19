@@ -176,7 +176,7 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         // Auto-upgrade cached demo data from earlier template versions to the new fictional sample data
         if (
           parsed &&
-          (parsed.isDemoData || parsed.profile?.name?.includes('Odiongan')) &&
+          parsed.isDemoData &&
           parsed.version !== INITIAL_CHURCH_DATA.version
         ) {
           if (safeYear === 2026) {
@@ -729,13 +729,12 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
           ...INITIAL_CHURCH_DATA,
           fiscalYear: selectedYear,
           isDemoData: true,
-          profile:
-            data.isDemoData || data.profile?.name?.includes('Odiongan')
-              ? { ...INITIAL_CHURCH_DATA.profile }
-              : {
-                  ...INITIAL_CHURCH_DATA.profile,
-                  ...data.profile,
-                },
+          profile: data.isDemoData
+            ? { ...INITIAL_CHURCH_DATA.profile }
+            : {
+                ...INITIAL_CHURCH_DATA.profile,
+                ...data.profile,
+              },
         };
         setData(resetData);
         persistLocally(resetData, selectedYear);

@@ -21,8 +21,10 @@ import {
   Rocket,
   Lock,
   Download,
+  Bug,
+  ExternalLink,
 } from 'lucide-react';
-import { APP_VERSION } from '../constants/version';
+import { APP_VERSION, APP_ISSUES_URL } from '../constants/version';
 
 interface HelpModalProps {
   isOpen: boolean;
@@ -262,7 +264,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                   desc: 'Set annual and monthly department targets across common church categories to monitor spending variance throughout the fiscal year.',
                 },
                 {
-                  tab: 'reports',
+                  tab: 'board-report',
                   title: '6. Board Monthly Report',
                   desc: 'Generate printable monthly financial statements, denominational & district remittance schedules, and lock approved monthly periods.',
                 },
@@ -452,7 +454,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
               <div className="pt-1">
                 <button
                   onClick={() => {
-                    onNavigateToTab('reports');
+                    onNavigateToTab('board-report');
                     onClose();
                   }}
                   className="px-3 py-1.5 bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-300 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5"
@@ -1026,6 +1028,39 @@ export const HelpModal: React.FC<HelpModalProps> = ({
           </div>
         ),
       },
+      {
+        id: 'faq-report-issue-bug',
+        category: 'faq',
+        title: 'How do I report a bug, log an issue, or request a feature?',
+        summary: 'Submit bug reports, issues, or ministry feature requests via our official GitHub issue tracker.',
+        tags: ['bug', 'issue', 'error', 'support', 'feedback', 'github', 'feature', 'request', 'problem', 'log'],
+        content: (
+          <div className="space-y-3 text-slate-700 text-xs">
+            <p>
+              If you encounter a software bug, calculation issue, or have a suggestion for improving <strong>GraceBooks Church Finance</strong>, you can log an issue directly on our GitHub repository:
+            </p>
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="font-semibold text-slate-900">Official Issue &amp; Bug Tracker</div>
+                <div className="font-mono text-[11px] text-blue-600 break-all">{APP_ISSUES_URL}</div>
+              </div>
+              <a
+                href={APP_ISSUES_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors shrink-0"
+              >
+                <Bug className="w-3.5 h-3.5 text-rose-400" />
+                <span>Log Issue / Bug</span>
+                <ExternalLink className="w-3 h-3 text-slate-400" />
+              </a>
+            </div>
+            <p className="text-slate-500">
+              <strong>Privacy Note:</strong> When logging an issue on GitHub, please include your app version (<code>v{APP_VERSION}</code>) and steps to reproduce, but <strong>never attach live church JSON or CSV backups</strong> containing confidential member giving records.
+            </p>
+          </div>
+        ),
+      },
     ],
     [onNavigateToTab, onClose, onOpenProfile, onOpenRollover, onOpenDrive, onOpenImport, onOpenDataMode]
   );
@@ -1185,12 +1220,24 @@ export const HelpModal: React.FC<HelpModalProps> = ({
               anywhere to open this manual.
             </span>
           </div>
-          <button
-            onClick={onClose}
-            className="w-full sm:w-auto px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
-          >
-            Done Reading
-          </button>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+            <a
+              href={APP_ISSUES_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-semibold rounded-lg border border-slate-300 shadow-2xs transition-colors"
+            >
+              <Bug className="w-3.5 h-3.5 text-rose-500" />
+              <span>Report Issue / Bug</span>
+              <ExternalLink className="w-3 h-3 text-slate-400" />
+            </a>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
+            >
+              Done Reading
+            </button>
+          </div>
         </div>
       </div>
     </div>
