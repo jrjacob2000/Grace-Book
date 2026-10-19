@@ -3,11 +3,27 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User,
 import rawAppletConfig from '../../firebase-applet-config.json';
 import { clearDriveCache } from './driveService';
 
+const rawProjectId = (import.meta.env.VITE_FIREBASE_PROJECT_ID || rawAppletConfig.projectId || '').trim();
+const rawAuthDomain = (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || rawAppletConfig.authDomain || '').trim();
+
+// GitHub Pages (*.github.io) does not host Firebase's /__/auth/handler endpoint.
+// Always fall back to <projectId>.firebaseapp.com if authDomain is empty or set to github.io.
+const normalizedAuthDomain =
+  !rawAuthDomain || rawAuthDomain.endsWith('.github.io') || rawAuthDomain.includes('github.io/')
+    ? rawProjectId
+      ? `${rawProjectId}.firebaseapp.com`
+      : ''
+    : rawAuthDomain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+
 const resolvedConfig = {
   apiKey: (import.meta.env.VITE_FIREBASE_API_KEY || rawAppletConfig.apiKey || '').trim(),
-  authDomain: (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || rawAppletConfig.authDomain || '').trim(),
-  projectId: (import.meta.env.VITE_FIREBASE_PROJECT_ID || rawAppletConfig.projectId || '').trim(),
-  storageBucket: (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || rawAppletConfig.storageBucket || '').trim(),
+  authDomain: normalizedAuthDomain,
+  projectId: rawProjectId,
+  storageBucket: (
+    import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ||
+    rawAppletConfig.storageBucket ||
+    (rawProjectId ? `${rawProjectId}.firebasestorage.app` : '')
+  ).trim(),
   messagingSenderId: (import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || rawAppletConfig.messagingSenderId || '').trim(),
   appId: (import.meta.env.VITE_FIREBASE_APP_ID || rawAppletConfig.appId || '').trim(),
   oAuthClientId: (import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID || rawAppletConfig.oAuthClientId || '').trim(),
