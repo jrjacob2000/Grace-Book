@@ -35,8 +35,14 @@ import {
   logout as authLogout,
   getAccessToken,
 } from '../lib/firebaseAuth';
+import {
+  safeJsonParse,
+  sanitizeFinancialData,
+  toSafeFiscalYear,
+} from '../lib/security';
 
-export const getStorageKeyForYear = (year: number) => `gracebooks_cfgp_data_${year}`;
+export const getStorageKeyForYear = (year: number) =>
+  `gracebooks_cfgp_data_${toSafeFiscalYear(year)}`;
 
 const round2 = (num: number): number => Math.round((num + Number.EPSILON) * 100) / 100;
 
@@ -161,43 +167,29 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Load state for selected year
   const loadYearDataFromStorage = (year: number): ChurchFinancialData => {
+    const safeYear = toSafeFiscalYear(year, 2026);
     try {
-      const key = getStorageKeyForYear(year);
+      const key = getStorageKeyForYear(safeYear);
       const saved = localStorage.getItem(key);
       if (saved) {
-        const parsed = JSON.parse(saved);
+        const parsed = safeJsonParse<any>(saved);
         // Auto-upgrade cached demo data from earlier template versions to the new fictional sample data
         if (
           parsed &&
           (parsed.isDemoData || parsed.profile?.name?.includes('Odiongan')) &&
           parsed.version !== INITIAL_CHURCH_DATA.version
         ) {
-          if (year === 2026) {
+          if (safeYear === 2026) {
             localStorage.setItem(key, JSON.stringify(INITIAL_CHURCH_DATA));
             return INITIAL_CHURCH_DATA;
           }
         }
         if (parsed && Array.isArray(parsed.funds) && parsed.funds.length > 0) {
-          if (!parsed.profile.currencySymbol || parsed.profile.currencySymbol === '$') {
-            parsed.profile.currencySymbol = '₱';
-          }
-          if (parsed.profile.auditor1 === undefined) {
-            parsed.profile.auditor1 = 'Deacon Samuel T. Brooks';
-          }
-          if (!parsed.profile.auditor2) {
-            parsed.profile.auditor2 = 'Claire M. Bennett';
-          }
-          if (!parsed.categories || !parsed.categories.collectionCategories) {
-            parsed.categories = {
-              collectionCategories: DEFAULT_COLLECTION_CATEGORIES,
-              expenseCategories: DEFAULT_EXPENSE_CATEGORIES,
-            };
-          }
-          return parsed;
+          return sanitizeFinancialData(parsed, safeYear);
         }
       }
     } catch (e) {
-      console.warn(`Could not read cached data for ${year}:`, e);
+      console.warn(`Could not read cached data for ${safeYear}:`, e);
     }
     // Default to INITIAL_CHURCH_DATA for 2026
     if (year === 2026) {
@@ -636,17 +628,18 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Import raw JSON file
   const importJsonFile = (importedData: ChurchFinancialData) => {
-    const fileYear = importedData.fiscalYear || selectedYear;
+    const sanitized = sanitizeFinancialData(importedData, selectedYear);
+    const fileYear = toSafeFiscalYear(sanitized.fiscalYear, selectedYear);
     requestUserConfirmation({
       title: `Import Church Financial Data (${fileYear})?`,
-      message: `Importing this file will load ledger data for "${importedData.profile?.name || 'Imported Church'}" into fiscal year ${fileYear}.`,
+      message: `Importing this file will load ledger data for "${sanitized.profile?.name || 'Imported Church'}" into fiscal year ${fileYear}.`,
       confirmLabel: 'Import & Replace',
       isDestructive: true,
       onConfirm: () => {
         setAvailableYears((prev) => Array.from(new Set([...prev, fileYear])).sort((a, b) => b - a));
         setSelectedYearState(fileYear);
-        setData(importedData);
-        persistLocally(importedData, fileYear);
+        setData(sanitized);
+        persistLocally(sanitized, fileYear);
         if (accessToken) {
           setSyncStatus('unsaved_changes');
         }

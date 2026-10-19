@@ -1,7 +1,15 @@
 import { ChurchFinancialData } from '../types/finance';
+import {
+  escapeDriveQueryString,
+  isValidDriveId,
+  safeJsonParse,
+  sanitizeFinancialData,
+  toSafeFiscalYear,
+} from './security';
 
 export const GRACEBOOKS_FOLDER_NAME = 'GraceBooks Church Finance';
-export const getDriveFileNameForYear = (year: number) => `church_financial_data_${year}.json`;
+export const getDriveFileNameForYear = (year: number) =>
+  `church_financial_data_${toSafeFiscalYear(year)}.json`;
 export const DRIVE_LEGACY_FILENAME = 'church_financial_data.json';
 
 export interface DriveFileInfo {
@@ -23,16 +31,24 @@ export interface DriveFolderInfo {
 let cachedFolder: DriveFolderInfo | null = null;
 
 /**
+ * Clears in-memory Drive folder cache (called upon user sign-out or account switch).
+ */
+export function clearDriveCache(): void {
+  cachedFolder = null;
+}
+
+/**
  * Finds or creates the dedicated "GraceBooks Church Finance" folder in Google Drive.
  */
 export async function getOrCreateDedicatedFolder(accessToken: string): Promise<DriveFolderInfo> {
-  if (cachedFolder) {
+  if (cachedFolder && isValidDriveId(cachedFolder.id)) {
     return cachedFolder;
   }
 
   // 1. Search for existing dedicated folder
+  const safeFolderName = escapeDriveQueryString(GRACEBOOKS_FOLDER_NAME);
   const query = encodeURIComponent(
-    `mimeType = 'application/vnd.google-apps.folder' and name = '${GRACEBOOKS_FOLDER_NAME}' and trashed = false`
+    `mimeType = 'application/vnd.google-apps.folder' and name = '${safeFolderName}' and trashed = false`
   );
   const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,webViewLink)&pageSize=1`;
 
@@ -43,7 +59,7 @@ export async function getOrCreateDedicatedFolder(accessToken: string): Promise<D
 
   if (searchRes.ok) {
     const data = await searchRes.json();
-    if (data.files && data.files.length > 0) {
+    if (data.files && data.files.length > 0 && isValidDriveId(data.files[0].id)) {
       cachedFolder = data.files[0] as DriveFolderInfo;
       return cachedFolder;
     }
@@ -77,8 +93,9 @@ export async function getOrCreateDedicatedFolder(accessToken: string): Promise<D
  * Moves an existing file into the dedicated folder if it is not already in it.
  */
 async function moveFileToFolder(accessToken: string, fileId: string, folderId: string): Promise<void> {
+  if (!isValidDriveId(fileId) || !isValidDriveId(folderId)) return;
   try {
-    const patchUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?addParents=${folderId}&fields=id,parents`;
+    const patchUrl = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?addParents=${encodeURIComponent(folderId)}&fields=id,parents`;
     await fetch(patchUrl, {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -96,7 +113,8 @@ export async function findDriveFileForYear(
   accessToken: string,
   year: number
 ): Promise<DriveFileInfo | null> {
-  const specificName = getDriveFileNameForYear(year);
+  const safeYear = toSafeFiscalYear(year);
+  const specificName = escapeDriveQueryString(getDriveFileNameForYear(safeYear));
   let folder: DriveFolderInfo | null = null;
 
   try {
@@ -106,9 +124,10 @@ export async function findDriveFileForYear(
   }
 
   // 1. Search inside the dedicated folder if available
-  if (folder) {
+  if (folder && isValidDriveId(folder.id)) {
+    const safeFolderId = escapeDriveQueryString(folder.id);
     const folderQuery = encodeURIComponent(
-      `'${folder.id}' in parents and name = '${specificName}' and trashed = false`
+      `'${safeFolderId}' in parents and name = '${specificName}' and trashed = false`
     );
     const folderUrl = `https://www.googleapis.com/drive/v3/files?q=${folderQuery}&fields=files(id,name,modifiedTime,size,webViewLink,parents)&pageSize=1`;
 
@@ -150,8 +169,9 @@ export async function findDriveFileForYear(
   }
 
   // 3. If year 2026, also check legacy filename
-  if (year === 2026) {
-    const legacyQuery = encodeURIComponent(`name = '${DRIVE_LEGACY_FILENAME}' and trashed = false`);
+  if (safeYear === 2026) {
+    const safeLegacy = escapeDriveQueryString(DRIVE_LEGACY_FILENAME);
+    const legacyQuery = encodeURIComponent(`name = '${safeLegacy}' and trashed = false`);
     const legacyUrl = `https://www.googleapis.com/drive/v3/files?q=${legacyQuery}&fields=files(id,name,modifiedTime,size,webViewLink,parents)&pageSize=1`;
     const legRes = await fetch(legacyUrl, {
       method: 'GET',
@@ -211,13 +231,16 @@ export async function listAllAnnualDriveFiles(accessToken: string): Promise<Driv
 }
 
 /**
- * Loads the JSON file contents from Google Drive.
+ * Loads and sanitizes the JSON file contents from Google Drive.
  */
 export async function readFinancialDataFromDrive(
   accessToken: string,
   fileId: string
 ): Promise<ChurchFinancialData> {
-  const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+  if (!isValidDriveId(fileId)) {
+    throw new Error('Invalid Google Drive file identifier.');
+  }
+  const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`;
 
   const response = await fetch(url, {
     method: 'GET',
@@ -231,8 +254,9 @@ export async function readFinancialDataFromDrive(
     throw new Error(`Failed to load file from Google Drive (${response.status}): ${errorText}`);
   }
 
-  const rawJson = await response.json();
-  return rawJson as ChurchFinancialData;
+  const rawText = await response.text();
+  const rawParsed = safeJsonParse<ChurchFinancialData>(rawText);
+  return sanitizeFinancialData(rawParsed);
 }
 
 /**
@@ -243,8 +267,9 @@ export async function createFinancialDataFileInDrive(
   financialData: ChurchFinancialData,
   fileName?: string
 ): Promise<DriveFileInfo> {
-  const targetFileName = fileName || getDriveFileNameForYear(financialData.fiscalYear || new Date().getFullYear());
-  
+  const safeYear = toSafeFiscalYear(financialData.fiscalYear || new Date().getFullYear());
+  const targetFileName = fileName || getDriveFileNameForYear(safeYear);
+
   // Ensure dedicated folder exists and get its ID
   const folder = await getOrCreateDedicatedFolder(accessToken);
 
@@ -255,7 +280,7 @@ export async function createFinancialDataFileInDrive(
   const metadata = {
     name: targetFileName,
     mimeType: 'application/json',
-    description: `Church financial tracking master ledger for ${financialData.fiscalYear || 'current year'} created by GraceBooks`,
+    description: `Church financial tracking master ledger for ${safeYear} created by GraceBooks`,
     parents: [folder.id], // Put directly in dedicated folder!
   };
 
@@ -296,7 +321,10 @@ export async function updateFinancialDataInDrive(
   fileId: string,
   financialData: ChurchFinancialData
 ): Promise<DriveFileInfo> {
-  const url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media&fields=id,name,modifiedTime,size,webViewLink,parents`;
+  if (!isValidDriveId(fileId)) {
+    throw new Error('Invalid Google Drive file identifier.');
+  }
+  const url = `https://www.googleapis.com/upload/drive/v3/files/${encodeURIComponent(fileId)}?uploadType=media&fields=id,name,modifiedTime,size,webViewLink,parents`;
 
   const response = await fetch(url, {
     method: 'PATCH',
@@ -322,7 +350,10 @@ export async function deleteFinancialDataFileFromDrive(
   accessToken: string,
   fileId: string
 ): Promise<void> {
-  const url = `https://www.googleapis.com/drive/v3/files/${fileId}`;
+  if (!isValidDriveId(fileId)) {
+    throw new Error('Invalid Google Drive file identifier.');
+  }
+  const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`;
 
   const response = await fetch(url, {
     method: 'DELETE',

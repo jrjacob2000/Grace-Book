@@ -15,6 +15,11 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import { useChurchFinance } from '../context/ChurchFinanceContext';
+import {
+  getSafeDriveWebUrl,
+  safeJsonParse,
+  sanitizeFinancialData,
+} from '../lib/security';
 
 interface DriveSyncModalProps {
   isOpen: boolean;
@@ -62,15 +67,14 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        const parsed = JSON.parse(event.target?.result as string);
-        if (parsed && Array.isArray(parsed.funds) && Array.isArray(parsed.accounts)) {
-          importJsonFile(parsed);
-          onClose();
-        } else {
-          setLocalUploadError('Invalid church financial JSON format: missing funds or accounts array.');
-        }
-      } catch {
-        setLocalUploadError('Could not parse JSON file. Please verify the file is a valid JSON backup.');
+        const raw = safeJsonParse(event.target?.result as string);
+        const sanitized = sanitizeFinancialData(raw, selectedYear);
+        importJsonFile(sanitized);
+        onClose();
+      } catch (err: any) {
+        setLocalUploadError(
+          err?.message || 'Could not parse JSON file. Please verify the file is a valid JSON backup.'
+        );
       }
     };
     reader.readAsText(file);
@@ -156,9 +160,9 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
 
                   {driveFolder && (
                     <a
-                      href={driveFolder.webViewLink || `https://drive.google.com/drive/folders/${driveFolder.id}`}
+                      href={getSafeDriveWebUrl(driveFolder.webViewLink, driveFolder.id, true)}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 rounded-lg text-xs font-semibold shrink-0 transition-colors"
                     >
                       <span>Open Folder in Drive</span>
@@ -186,9 +190,9 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
                   {driveFile && driveFile.webViewLink && (
                     <div className="sm:col-span-2 pt-0.5">
                       <a
-                        href={driveFile.webViewLink}
+                        href={getSafeDriveWebUrl(driveFile.webViewLink, driveFile.id, false)}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1 text-xs font-medium"
                       >
                         <span>Open {activeFileName} file directly</span>
@@ -260,9 +264,9 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
 
                         {file.webViewLink && (
                           <a
-                            href={file.webViewLink}
+                            href={getSafeDriveWebUrl(file.webViewLink, file.id, false)}
                             target="_blank"
-                            rel="noreferrer"
+                            rel="noopener noreferrer"
                             className="p-1 text-slate-400 hover:text-slate-600"
                             title="Open in Drive"
                           >

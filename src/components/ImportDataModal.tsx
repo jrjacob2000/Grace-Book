@@ -24,6 +24,11 @@ import {
   PaymentMethod,
   ExpenseStatus,
 } from '../types/finance';
+import {
+  safeJsonParse,
+  sanitizeCsvTextField,
+  sanitizeFinancialData,
+} from '../lib/security';
 
 interface ImportDataModalProps {
   isOpen: boolean;
@@ -133,14 +138,9 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
     reader.onload = (event) => {
       try {
         const text = event.target?.result as string;
-        const parsed = JSON.parse(text) as ChurchFinancialData;
-
-        // Basic schema verification
-        if (!parsed.profile || !Array.isArray(parsed.funds) || !Array.isArray(parsed.accounts)) {
-          throw new Error('File is missing core church data structures (profile, funds, or accounts).');
-        }
-
-        setParsedJson(parsed);
+        const raw = safeJsonParse<ChurchFinancialData>(text);
+        const sanitized = sanitizeFinancialData(raw, selectedYear);
+        setParsedJson(sanitized);
       } catch (err: any) {
         setJsonError(err.message || 'Invalid JSON file format.');
         setParsedJson(null);
@@ -276,28 +276,35 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
         }
       }
 
-      const batchNumber = batchIdx >= 0 && cols[batchIdx] ? cols[batchIdx] : undefined;
-      const category = categoryIdx >= 0 && cols[categoryIdx] ? cols[categoryIdx] : 'Tithes & General Offerings';
+      const batchNumber =
+        batchIdx >= 0 && cols[batchIdx] ? sanitizeCsvTextField(cols[batchIdx], 100) : undefined;
+      const category =
+        categoryIdx >= 0 && cols[categoryIdx]
+          ? sanitizeCsvTextField(cols[categoryIdx], 200) || 'Tithes & General Offerings'
+          : 'Tithes & General Offerings';
 
       let counters: string[] = [];
       if (counter1Idx >= 0 || counter2Idx >= 0) {
         counters = [
-          counter1Idx >= 0 ? cols[counter1Idx] : '',
-          counter2Idx >= 0 ? cols[counter2Idx] : '',
+          counter1Idx >= 0 ? sanitizeCsvTextField(cols[counter1Idx], 150) : '',
+          counter2Idx >= 0 ? sanitizeCsvTextField(cols[counter2Idx], 150) : '',
         ]
           .map((c) => c?.trim())
           .filter(Boolean);
       } else if (countersIdx >= 0 && cols[countersIdx]) {
         counters = cols[countersIdx]
           .split(/[,;/]/)
-          .map((c) => c.trim())
+          .map((c) => sanitizeCsvTextField(c, 150))
           .filter(Boolean);
       }
       if (counters.length === 0) {
         counters = [data.profile.auditor1 || 'First Auditor', data.profile.auditor2 || 'Second Auditor'];
       }
 
-      const notes = notesIdx >= 0 && cols[notesIdx] ? cols[notesIdx] : 'Imported via CSV';
+      const notes =
+        notesIdx >= 0 && cols[notesIdx]
+          ? sanitizeCsvTextField(cols[notesIdx], 500) || 'Imported via CSV'
+          : 'Imported via CSV';
 
       items.push({
         date,
@@ -396,7 +403,10 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
       const amount = parseFloat(rawAmount) || 0;
       if (amount <= 0) continue;
 
-      const payee = payeeIdx >= 0 && cols[payeeIdx] ? cols[payeeIdx] : 'Church Expense';
+      const payee =
+        payeeIdx >= 0 && cols[payeeIdx]
+          ? sanitizeCsvTextField(cols[payeeIdx], 200) || 'Church Expense'
+          : 'Church Expense';
 
       // Fund match
       let fundId = expensesFallbackFund || data.funds[0]?.id || '';
@@ -424,12 +434,26 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
         if (matched) accountId = matched.id;
       }
 
-      const category = categoryIdx >= 0 && cols[categoryIdx] ? cols[categoryIdx] : 'Office Supplies, Printing & Software';
-      const department = deptIdx >= 0 && cols[deptIdx] ? cols[deptIdx] : 'Administration';
-      const checkNumber = checkNoIdx >= 0 && cols[checkNoIdx] ? cols[checkNoIdx] : '';
-      const invoiceNumber = invoiceIdx >= 0 && cols[invoiceIdx] ? cols[invoiceIdx] : '';
-      const description = descIdx >= 0 && cols[descIdx] ? cols[descIdx] : 'Disbursement entry';
-      const approvedBy = approvedIdx >= 0 && cols[approvedIdx] ? cols[approvedIdx] : 'Church Board';
+      const category =
+        categoryIdx >= 0 && cols[categoryIdx]
+          ? sanitizeCsvTextField(cols[categoryIdx], 200) || 'Office Supplies, Printing & Software'
+          : 'Office Supplies, Printing & Software';
+      const department =
+        deptIdx >= 0 && cols[deptIdx]
+          ? sanitizeCsvTextField(cols[deptIdx], 150) || 'Administration'
+          : 'Administration';
+      const checkNumber =
+        checkNoIdx >= 0 && cols[checkNoIdx] ? sanitizeCsvTextField(cols[checkNoIdx], 80) : '';
+      const invoiceNumber =
+        invoiceIdx >= 0 && cols[invoiceIdx] ? sanitizeCsvTextField(cols[invoiceIdx], 80) : '';
+      const description =
+        descIdx >= 0 && cols[descIdx]
+          ? sanitizeCsvTextField(cols[descIdx], 500) || 'Disbursement entry'
+          : 'Disbursement entry';
+      const approvedBy =
+        approvedIdx >= 0 && cols[approvedIdx]
+          ? sanitizeCsvTextField(cols[approvedIdx], 150) || 'Church Board'
+          : 'Church Board';
 
       let paymentMethod: PaymentMethod = 'check';
       if (methodIdx >= 0 && cols[methodIdx]) {

@@ -20,6 +20,7 @@ import {
 import { useChurchFinance } from '../context/ChurchFinanceContext';
 import { ExpenseItem, PaymentMethod, ExpenseStatus } from '../types/finance';
 import { DEFAULT_EXPENSE_CATEGORIES } from '../data/initialData';
+import { escapeCsvCell } from '../lib/security';
 
 interface ExpensesViewProps {
   isModalOpen: boolean;
@@ -203,19 +204,19 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
       const fundName = data.funds.find((f) => f.id === e.fundId)?.name || e.fundId;
       const acctName = data.accounts.find((a) => a.id === e.accountId)?.name || e.accountId;
       return [
-        e.date,
-        `"${e.payee.replace(/"/g, '""')}"`,
-        `"${e.description.replace(/"/g, '""')}"`,
-        `"${e.department.replace(/"/g, '""')}"`,
-        `"${e.category.replace(/"/g, '""')}"`,
-        `"${fundName.replace(/"/g, '""')}"`,
-        `"${acctName.replace(/"/g, '""')}"`,
-        e.paymentMethod,
-        `"${(e.checkNumber || '').replace(/"/g, '""')}"`,
-        `"${(e.invoiceNumber || '').replace(/"/g, '""')}"`,
+        escapeCsvCell(e.date),
+        escapeCsvCell(e.payee),
+        escapeCsvCell(e.description),
+        escapeCsvCell(e.department),
+        escapeCsvCell(e.category),
+        escapeCsvCell(fundName),
+        escapeCsvCell(acctName),
+        escapeCsvCell(e.paymentMethod),
+        escapeCsvCell(e.checkNumber || ''),
+        escapeCsvCell(e.invoiceNumber || ''),
         e.amount.toFixed(2),
-        e.status,
-        `"${e.approvedBy.replace(/"/g, '""')}"`,
+        escapeCsvCell(e.status),
+        escapeCsvCell(e.approvedBy),
       ].join(',');
     });
     const csvContent = [headers.join(','), ...rows].join('\n');

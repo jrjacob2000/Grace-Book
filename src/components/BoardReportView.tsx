@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useChurchFinance } from '../context/ChurchFinanceContext';
 import { BoardReportMeta, FoursquareRemittanceSummary } from '../types/finance';
+import { escapeCsvCell } from '../lib/security';
 
 export const BoardReportView: React.FC = () => {
   const {
@@ -355,13 +356,13 @@ export const BoardReportView: React.FC = () => {
   // Export CSV matching exact spreadsheet layout
   const exportSpreadsheetCsv = () => {
     const lines = [
-      `"${data.profile.denomination || 'GRACE CHRISTIAN FELLOWSHIP INTERNATIONAL'}"`,
-      `"${data.profile.headquartersAddress || '120 Heritage Boulevard, Suite 400, Metro City'}"`,
+      escapeCsvCell(data.profile.denomination || 'GRACE CHRISTIAN FELLOWSHIP INTERNATIONAL'),
+      escapeCsvCell(data.profile.headquartersAddress || '120 Heritage Boulevard, Suite 400, Metro City'),
       `""`,
-      `"Church Name:","${data.profile.name}"`,
-      `"Address:","${data.profile.address}"`,
-      `"District:","${data.profile.district || 'Central Valley District'}"`,
-      `"Pastor:","${data.profile.seniorPastor}"`,
+      `"Church Name:",${escapeCsvCell(data.profile.name)}`,
+      `"Address:",${escapeCsvCell(data.profile.address)}`,
+      `"District:",${escapeCsvCell(data.profile.district || 'Central Valley District')}`,
+      `"Pastor:",${escapeCsvCell(data.profile.seniorPastor)}`,
       `"MONTHLY CHURCH FINANCIAL REPORT"`,
       `"${monthName.toUpperCase()} ${selectedYear}"`,
       `"","Beginning Balance","Receipts","Disbursements","Net Transfers","Ending Balance"`,
@@ -369,7 +370,7 @@ export const BoardReportView: React.FC = () => {
 
     fundRows.forEach((r) => {
       lines.push(
-        `"${r.name}",${r.beginningBalance ? r.beginningBalance.toFixed(2) : '-'},${r.receipts ? r.receipts.toFixed(2) : '-'},${r.disbursements ? r.disbursements.toFixed(2) : '-'},${r.netTransfer ? r.netTransfer.toFixed(2) : '-'},${r.endingBalance ? r.endingBalance.toFixed(2) : '-'}`
+        `${escapeCsvCell(r.name)},${r.beginningBalance ? r.beginningBalance.toFixed(2) : '-'},${r.receipts ? r.receipts.toFixed(2) : '-'},${r.disbursements ? r.disbursements.toFixed(2) : '-'},${r.netTransfer ? r.netTransfer.toFixed(2) : '-'},${r.endingBalance ? r.endingBalance.toFixed(2) : '-'}`
       );
     });
 

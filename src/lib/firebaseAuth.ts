@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
+import { clearDriveCache } from './driveService';
 
 // Initialize Firebase App singleton
 const app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
@@ -34,6 +35,7 @@ export const initAuth = (
       }
     } else {
       cachedAccessToken = null;
+      clearDriveCache();
       if (onAuthFailure) onAuthFailure();
     }
   });
@@ -42,6 +44,7 @@ export const initAuth = (
 export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
   try {
     isSigningIn = true;
+    clearDriveCache();
     const result = await signInWithPopup(auth, provider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (!credential?.accessToken) {
@@ -69,4 +72,5 @@ export const setAccessTokenInMemory = (token: string | null) => {
 export const logout = async () => {
   await auth.signOut();
   cachedAccessToken = null;
+  clearDriveCache();
 };

@@ -285,6 +285,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <img
                     src={user.photoURL}
                     alt={user.displayName || 'User'}
+                    referrerPolicy="no-referrer"
                     className="w-7 h-7 rounded-full border border-slate-700"
                   />
                 ) : (

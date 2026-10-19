@@ -22,6 +22,7 @@ import {
 import { useChurchFinance } from '../context/ChurchFinanceContext';
 import { CollectionItem, ServiceType, CashBreakdown } from '../types/finance';
 import { DEFAULT_COLLECTION_CATEGORIES } from '../data/initialData';
+import { escapeCsvCell } from '../lib/security';
 
 interface CollectionsViewProps {
   isModalOpen: boolean;
@@ -258,19 +259,19 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
       const fundName = data.funds.find((f) => f.id === c.fundId)?.name || c.fundId;
       const acctName = data.accounts.find((a) => a.id === c.accountId)?.name || c.accountId;
       return [
-        c.date,
-        c.serviceType,
-        `"${(c.batchNumber || '').replace(/"/g, '""')}"`,
-        `"${c.category.replace(/"/g, '""')}"`,
-        `"${fundName.replace(/"/g, '""')}"`,
-        `"${acctName.replace(/"/g, '""')}"`,
+        escapeCsvCell(c.date),
+        escapeCsvCell(c.serviceType),
+        escapeCsvCell(c.batchNumber || ''),
+        escapeCsvCell(c.category),
+        escapeCsvCell(fundName),
+        escapeCsvCell(acctName),
         c.cashAmount.toFixed(2),
         c.checksAmount.toFixed(2),
         c.digitalAmount.toFixed(2),
         c.totalAmount.toFixed(2),
-        `"${(c.counters[0] || '').replace(/"/g, '""')}"`,
-        `"${(c.counters[1] || '').replace(/"/g, '""')}"`,
-        `"${(c.notes || '').replace(/"/g, '""')}"`,
+        escapeCsvCell(c.counters[0] || ''),
+        escapeCsvCell(c.counters[1] || ''),
+        escapeCsvCell(c.notes || ''),
       ].join(',');
     });
     const csvContent = [headers.join(','), ...rows].join('\n');
