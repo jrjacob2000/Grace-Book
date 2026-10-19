@@ -36,8 +36,30 @@ declare global {
   }
 }
 
-const rawProjectId = (import.meta.env.VITE_FIREBASE_PROJECT_ID || rawAppletConfig.projectId || '').trim();
-const rawAuthDomain = (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || rawAppletConfig.authDomain || '').trim();
+const cleanEnvValue = (val: string | undefined): string => {
+  if (!val) return '';
+  return val
+    .trim()
+    .replace(/^["']+|["']+$/g, '')
+    .trim();
+};
+
+const normalizeOAuthClientId = (raw: string): string => {
+  const cleaned = cleanEnvValue(raw);
+  if (!cleaned) return '';
+  // If user pasted only the numeric-hash prefix (e.g. "123456789-abcdef"), append the standard domain
+  if (/^\d+-[a-zA-Z0-9_]+$/.test(cleaned)) {
+    return `${cleaned}.apps.googleusercontent.com`;
+  }
+  return cleaned;
+};
+
+const rawProjectId = cleanEnvValue(
+  import.meta.env.VITE_FIREBASE_PROJECT_ID || rawAppletConfig.projectId
+);
+const rawAuthDomain = cleanEnvValue(
+  import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || rawAppletConfig.authDomain
+);
 
 // GitHub Pages (*.github.io) does not host Firebase's /__/auth/handler endpoint.
 // Always fall back to <projectId>.firebaseapp.com if authDomain is empty or set to github.io.
@@ -49,17 +71,21 @@ const normalizedAuthDomain =
     : rawAuthDomain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 
 const resolvedConfig = {
-  apiKey: (import.meta.env.VITE_FIREBASE_API_KEY || rawAppletConfig.apiKey || '').trim(),
+  apiKey: cleanEnvValue(import.meta.env.VITE_FIREBASE_API_KEY || rawAppletConfig.apiKey),
   authDomain: normalizedAuthDomain,
   projectId: rawProjectId,
-  storageBucket: (
+  storageBucket: cleanEnvValue(
     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ||
-    rawAppletConfig.storageBucket ||
-    (rawProjectId ? `${rawProjectId}.firebasestorage.app` : '')
-  ).trim(),
-  messagingSenderId: (import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || rawAppletConfig.messagingSenderId || '').trim(),
-  appId: (import.meta.env.VITE_FIREBASE_APP_ID || rawAppletConfig.appId || '').trim(),
-  oAuthClientId: (import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID || rawAppletConfig.oAuthClientId || '').trim(),
+      rawAppletConfig.storageBucket ||
+      (rawProjectId ? `${rawProjectId}.firebasestorage.app` : '')
+  ),
+  messagingSenderId: cleanEnvValue(
+    import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || rawAppletConfig.messagingSenderId
+  ),
+  appId: cleanEnvValue(import.meta.env.VITE_FIREBASE_APP_ID || rawAppletConfig.appId),
+  oAuthClientId: normalizeOAuthClientId(
+    import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID || rawAppletConfig.oAuthClientId
+  ),
 };
 
 export const isFirebaseConfigured = (): boolean => {
