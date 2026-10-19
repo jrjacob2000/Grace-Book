@@ -152,7 +152,7 @@ export const YearRolloverModal: React.FC<YearRolloverModalProps> = ({ isOpen, on
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
                 <span>
-                  <strong>Balance Roll-Forward:</strong> December 31 ending balances for all 27 funds and bank accounts automatically become the January 1 beginning balances for {targetYear}.
+                  <strong>Balance Roll-Forward:</strong> December 31 ending balances for all {data.funds.length} designated funds and bank accounts automatically become the January 1 beginning balances for {targetYear}.
                 </span>
               </li>
               <li className="flex items-start gap-2">

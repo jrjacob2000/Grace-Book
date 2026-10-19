@@ -113,7 +113,7 @@ export const DataModeModal: React.FC<DataModeModalProps> = ({
                     <span>Option 1: Start Blank Live Production Ledger</span>
                   </div>
                   <p className="text-slate-600 leading-relaxed">
-                    Clears sample demonstration transactions and initializes all 27 fund balances and bank accounts to zero starting balances so you can start recording real live church tithes, offerings, and vendor disbursements for {selectedYear}. Preserves your active Church Profile details.
+                    Clears sample demonstration transactions and initializes all designated fund balances and bank accounts to zero starting balances so you can start recording real live church tithes, offerings, and vendor disbursements for {selectedYear}. Preserves your active Church Profile details.
                   </p>
                 </div>
               </div>

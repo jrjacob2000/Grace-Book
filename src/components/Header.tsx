@@ -97,7 +97,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Title & Badges */}
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
               <h1 className="font-bold text-base sm:text-lg text-white tracking-tight truncate max-w-[200px] xs:max-w-[280px] sm:max-w-[360px]">
-                {data.profile.name || 'Odiongan Foursquare Gospel Church'}
+                {data.profile.name || 'Grace Fellowship Community Church'}
               </h1>
               <div className="flex items-center gap-1.5 shrink-0">
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30">
@@ -134,7 +134,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Subtitle & Active File */}
             <div className="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
-              <span className="truncate max-w-[180px] sm:max-w-[260px]">{data.profile.district || 'Romblon Aklan District'}</span>
+              <span className="truncate max-w-[180px] sm:max-w-[260px]">{data.profile.district || 'Central Valley District'}</span>
               <span className="text-slate-600 shrink-0">•</span>
               <span className="font-mono text-blue-300 text-[11px] bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700/60 flex items-center gap-1 shrink-0 max-w-[200px] sm:max-w-[280px]">
                 <FileCode className="w-3 h-3 text-blue-400 shrink-0" />

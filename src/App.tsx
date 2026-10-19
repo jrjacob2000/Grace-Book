@@ -163,6 +163,10 @@ const AppContent: React.FC = () => {
           setImportInitialTab('json');
           setIsImportModalOpen(true);
         }}
+        onOpenDataMode={() => {
+          setIsHelpModalOpen(false);
+          setIsDataModeModalOpen(true);
+        }}
       />
       <ImportDataModal
         isOpen={isImportModalOpen}

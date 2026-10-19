@@ -6,7 +6,7 @@
       background: white !important;
       color: black !important;
     }
-    header, nav, button, .print\\:hidden {
+    header, nav, button, .print\:hidden {
       display: none !important;
     }
     main {

@@ -42,6 +42,7 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
     updateAccount,
     deleteAccount,
     transferFunds,
+    requestUserConfirmation,
   } = useChurchFinance();
 
   const currency = data.profile.currencySymbol || '₱';
@@ -187,7 +188,6 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
   const handleTransfer = (e: React.FormEvent) => {
     e.preventDefault();
     if (transferAmount <= 0) {
-      alert('Transfer amount must be greater than zero');
       return;
     }
 
@@ -385,9 +385,14 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
                         </button>
                         <button
                           onClick={() => {
-                            if (confirm(`Delete fund "${fund.name}"? Only do this if balance is zero or transferred.`)) {
-                              deleteFund(fund.id);
-                            }
+                            requestUserConfirmation({
+                              title: `Delete Fund "${fund.name}"?`,
+                              message: `Are you sure you want to delete "${fund.name}"? Only delete a fund if its balance is zero or has already been transferred to another fund.`,
+                              affectedItem: `${fund.name} (Code ${fund.code})`,
+                              confirmLabel: 'Delete Fund',
+                              isDestructive: true,
+                              onConfirm: () => deleteFund(fund.id),
+                            });
                           }}
                           className="p-1 text-slate-400 hover:text-rose-600"
                           title="Delete Fund"
@@ -486,9 +491,14 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
                         </button>
                         <button
                           onClick={() => {
-                            if (confirm(`Delete account "${acct.name}"? Only do this if account balance is zero.`)) {
-                              deleteAccount(acct.id);
-                            }
+                            requestUserConfirmation({
+                              title: `Delete Bank Account "${acct.name}"?`,
+                              message: `Are you sure you want to delete "${acct.name}"? Only delete a depository account if its balance is zero or has been transferred.`,
+                              affectedItem: `${acct.name} (${acct.institution})`,
+                              confirmLabel: 'Delete Account',
+                              isDestructive: true,
+                              onConfirm: () => deleteAccount(acct.id),
+                            });
                           }}
                           className="p-1 text-slate-400 hover:text-rose-600"
                           title="Delete Account"

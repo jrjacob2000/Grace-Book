@@ -70,7 +70,7 @@ export const ChurchProfileModal: React.FC<ChurchProfileModalProps> = ({
               value={profile.denomination}
               onChange={(e) => setProfile({ ...profile, denomination: e.target.value })}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-hidden text-sm"
-              placeholder="e.g. CHURCH OF THE FOURSQUARE GOSPEL IN THE PHILIPPINES"
+              placeholder="e.g. GRACE CHRISTIAN FELLOWSHIP INTERNATIONAL"
             />
           </div>
 
@@ -81,7 +81,7 @@ export const ChurchProfileModal: React.FC<ChurchProfileModalProps> = ({
               value={profile.headquartersAddress || ''}
               onChange={(e) => setProfile({ ...profile, headquartersAddress: e.target.value })}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-hidden text-sm"
-              placeholder="e.g. 1 F. Castillo Street, Project 4, Quezon, City"
+              placeholder="e.g. 120 Heritage Boulevard, Suite 400, Metro City"
             />
           </div>
 
@@ -93,7 +93,7 @@ export const ChurchProfileModal: React.FC<ChurchProfileModalProps> = ({
               value={profile.name}
               onChange={(e) => setProfile({ ...profile, name: e.target.value })}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-hidden text-sm font-semibold"
-              placeholder="e.g. Odiongan Foursquare Gospel Church"
+              placeholder="e.g. Grace Fellowship Community Church"
             />
           </div>
 
@@ -105,7 +105,7 @@ export const ChurchProfileModal: React.FC<ChurchProfileModalProps> = ({
                 value={profile.address}
                 onChange={(e) => setProfile({ ...profile, address: e.target.value })}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-hidden text-sm"
-                placeholder="e.g. Brgy. Liwayway, Odiongan, Romblon"
+                placeholder="e.g. 450 Hope Avenue, Greenfield District"
               />
             </div>
             <div>
@@ -115,7 +115,7 @@ export const ChurchProfileModal: React.FC<ChurchProfileModalProps> = ({
                 value={profile.district || ''}
                 onChange={(e) => setProfile({ ...profile, district: e.target.value })}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-hidden text-sm"
-                placeholder="e.g. Romblon Aklan District"
+                placeholder="e.g. Central Valley District"
               />
             </div>
           </div>
@@ -128,7 +128,7 @@ export const ChurchProfileModal: React.FC<ChurchProfileModalProps> = ({
                 value={profile.seniorPastor}
                 onChange={(e) => setProfile({ ...profile, seniorPastor: e.target.value })}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-hidden text-sm"
-                placeholder="e.g. Rev. Andrew R. Tiaga"
+                placeholder="e.g. Rev. Daniel S. Mercer"
               />
             </div>
             <div>
@@ -138,7 +138,7 @@ export const ChurchProfileModal: React.FC<ChurchProfileModalProps> = ({
                 value={profile.treasurer}
                 onChange={(e) => setProfile({ ...profile, treasurer: e.target.value })}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-hidden text-sm"
-                placeholder="Treasurer Name"
+                placeholder="e.g. Hannah L. Collins"
               />
             </div>
           </div>
@@ -151,7 +151,7 @@ export const ChurchProfileModal: React.FC<ChurchProfileModalProps> = ({
                 value={profile.auditor1 || ''}
                 onChange={(e) => setProfile({ ...profile, auditor1: e.target.value })}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-hidden text-sm"
-                placeholder="e.g. Bro. Nelson Morales"
+                placeholder="e.g. Deacon Samuel T. Brooks"
               />
             </div>
             <div>
@@ -161,7 +161,7 @@ export const ChurchProfileModal: React.FC<ChurchProfileModalProps> = ({
                 value={profile.auditor2 || ''}
                 onChange={(e) => setProfile({ ...profile, auditor2: e.target.value })}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-hidden text-sm"
-                placeholder="e.g. Sis. Rachel Perez"
+                placeholder="e.g. Claire M. Bennett"
               />
             </div>
           </div>

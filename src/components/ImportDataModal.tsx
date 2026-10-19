@@ -251,10 +251,10 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
   const downloadSampleCollectionsCsv = () => {
     const csvContent =
       'Date,Service Type,Fund,Bank Account,Category,Total Amount,Cash,Checks,Digital,Counters,Notes\n' +
-      `${selectedYear}-08-02,sunday_morning,General Fund,Operating Checking,Tithes,45000.00,40000.00,5000.00,0,Elder Mark / Sister Ana,Regular Sunday Tithes\n` +
-      `${selectedYear}-08-09,sunday_morning,Building Fund,Capital Building Savings,Building Pledge,25000.00,20000.00,0,5000.00,Brother Juan / Deacon David,Sanctuary Expansion\n` +
-      `${selectedYear}-08-16,youth_service,Youth Fund,Operating Checking,Youth Offering,3200.00,3200.00,0,0,Youth Advisor,Youth Fellowship Night\n` +
-      `${selectedYear}-08-23,sunday_morning,Mission Fund,Operating Checking,Mission Offering,8500.00,8500.00,0,0,Mission Director,Global Missions Sunday\n`;
+      `${selectedYear}-08-02,sunday_morning,General Operating Fund,Operating Checking,Tithes & General Offerings,24500.00,16500.00,5000.00,3000.00,Deacon Samuel Brooks / Claire Bennett,First Sunday Tithes & Offerings\n` +
+      `${selectedYear}-08-09,sunday_morning,Building & Facilities Fund,Building & Reserve Savings,Building & Capital Fund Offering,9500.00,3500.00,6000.00,0,Deacon Samuel Brooks / Elder Thomas Reed,Sanctuary Improvement Pledges\n` +
+      `${selectedYear}-08-16,youth_service,Youth & NextGen Fund,Operating Checking,Youth & Young Adults Ministry,2400.00,1900.00,0,500.00,Lydia Carter / Elder Thomas Reed,Youth Fellowship Offering\n` +
+      `${selectedYear}-08-23,sunday_morning,Missions & Outreach Fund,Operating Checking,Missions & Outreach Offering,4200.00,3200.00,0,1000.00,Deacon Samuel Brooks / Claire Bennett,Monthly Missions Sunday\n`;
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -388,10 +388,10 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
   const downloadSampleExpensesCsv = () => {
     const csvContent =
       'Date,Payee,Amount,Category,Department,Fund,Bank Account,Payment Method,Check Number,Description,Approved By\n' +
-      `${selectedYear}-08-05,Meralco / ROMELCO,12450.00,Utilities: Electric,Facilities & Operations,General Fund,Operating Checking,ach_transfer,ELEC-2026-08,Main Sanctuary Electric Bill,Treasurer\n` +
-      `${selectedYear}-08-10,Rev. Senior Pastor,25000.00,Pastoral Support,Pastoral & Ministry,General Fund,Operating Checking,check,CHK-4001,Monthly Pastoral Honorarium,Church Council\n` +
-      `${selectedYear}-08-15,Ace Hardware Supplies,4800.00,Facilities Maintenance,Facilities & Operations,General Fund,Operating Checking,cash,CASH-VOUCHER-12,Sanctuary lighting & repairs,Trustee Board\n` +
-      `${selectedYear}-08-20,National Office CFGP,9500.00,National Tithes & Remittances,Administration,General Fund,Operating Checking,ach_transfer,CFGP-NAT-08,Monthly District & NOS Remittance,Elder Board\n`;
+      `${selectedYear}-08-05,Rev. Daniel S. Mercer,25000.00,Pastoral Salary & Housing Allowance,Pastoral & Ministry,General Operating Fund,Operating Checking,ach_transfer,PAY-2026-08,Monthly Pastoral Salary & Housing Allowance,Church Board\n` +
+      `${selectedYear}-08-10,Metro City Power & Water Utility,5400.00,Utilities: Electricity Water & Internet,Facilities & Operations,General Operating Fund,Operating Checking,ach_transfer,UTIL-88412,Main Sanctuary Electricity & Water Bill,Hannah L. Collins\n` +
+      `${selectedYear}-08-18,Greenfield Hardware & Supply Co.,2850.00,Building & Facility Maintenance,Facilities & Operations,Building & Facilities Fund,Operating Checking,cash,INV-GH-3109,Sanctuary lighting & facility maintenance,Board of Trustees\n` +
+      `${selectedYear}-08-25,Central Valley Missions Board,3000.00,Missions & Outreach Support,Missions & Outreach,Missions & Outreach Fund,Operating Checking,check,2041,Monthly Regional Missions & Outreach Support,Missions Committee\n`;
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -475,7 +475,7 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
             }`}
           >
             <RotateCcw className="w-4 h-4 text-amber-500" />
-            <span>District Template</span>
+            <span>Sample Dataset</span>
           </button>
         </div>
 
@@ -897,23 +897,23 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
               <div className="p-4 bg-amber-50/70 border border-amber-300 rounded-xl space-y-2 text-xs">
                 <span className="font-bold text-amber-950 flex items-center gap-1.5">
                   <RotateCcw className="w-4 h-4 text-amber-600" />
-                  Restore Official Sample Template for {data.profile.name || 'Church'}
+                  Restore Fictional Demonstration Dataset
                 </span>
                 <p className="text-slate-700">
-                  This loads the complete benchmark dataset compliant with the {data.profile.district || 'District'} (CFGP) {selectedYear} Board Financial Report:
+                  This loads a clean, fictional sample dataset for training and exploring {selectedYear} church accounting features:
                 </p>
                 <ul className="list-disc pl-5 space-y-1 text-slate-700">
-                  <li>27 designated church funds (General, Building, Tithes, Pastoral, CAP, Auxiliaries, FBC).</li>
-                  <li>Official checking, savings, and cash accounts in perfect ledger balance.</li>
-                  <li>Standard weekly service collections with bill and coin denomination breakdown.</li>
-                  <li>Expense vouchers, honoraria, utilities, and National/District office remittances.</li>
+                  <li>10 common church funds (General Operating, Missions, Building, Benevolence, Youth, Children, Worship, Family Ministries, Events, and Reserve).</li>
+                  <li>Common giving and disbursement categories with balanced checking, savings, and petty cash accounts.</li>
+                  <li>Fictional Sunday service collections with bill, coin, check, and digital breakdown.</li>
+                  <li>Sample expense vouchers, utilities, maintenance, and ministry allocations.</li>
                 </ul>
               </div>
 
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
                 <div>
-                  <span className="font-semibold text-xs text-slate-900 block">Reset to Official {selectedYear} Sample</span>
-                  <span className="text-[11px] text-slate-500">Preserves active Church Profile name &amp; officers</span>
+                  <span className="font-semibold text-xs text-slate-900 block">Load Fictional {selectedYear} Sample Data</span>
+                  <span className="text-[11px] text-slate-500">Great for treasurer training and board demos</span>
                 </div>
                 <button
                   type="button"

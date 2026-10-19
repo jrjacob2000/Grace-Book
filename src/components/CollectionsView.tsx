@@ -38,6 +38,7 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
     deleteCollection,
     selectedYear,
     selectedMonth,
+    requestUserConfirmation,
   } = useChurchFinance();
 
   const currency = data.profile.currencySymbol || '₱';
@@ -439,9 +440,14 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
                           </button>
                           <button
                             onClick={() => {
-                              if (confirm('Delete this collection entry? Fund and account balances will be adjusted.')) {
-                                deleteCollection(item.id);
-                              }
+                              requestUserConfirmation({
+                                title: 'Delete Collection Record?',
+                                message: `Delete the ${currency}${item.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })} collection from ${item.date}? Target fund and bank account balances will be adjusted automatically.`,
+                                affectedItem: `${item.category} (${item.date})`,
+                                confirmLabel: 'Delete Collection',
+                                isDestructive: true,
+                                onConfirm: () => deleteCollection(item.id),
+                              });
                             }}
                             title="Delete Record"
                             className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-slate-100"
@@ -723,7 +729,7 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
                       required
                       value={formCounter1}
                       onChange={(e) => setFormCounter1(e.target.value)}
-                      placeholder="e.g. Deacon Nelson Morales"
+                      placeholder="e.g. Deacon Samuel Brooks"
                       className="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
@@ -736,7 +742,7 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
                       required
                       value={formCounter2}
                       onChange={(e) => setFormCounter2(e.target.value)}
-                      placeholder="e.g. Sis. Rachel Perez"
+                      placeholder="e.g. Claire Bennett"
                       className="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useChurchFinance } from '../context/ChurchFinanceContext';
 import { BudgetItem } from '../types/finance';
+import { DEFAULT_COLLECTION_CATEGORIES, DEFAULT_EXPENSE_CATEGORIES } from '../data/initialData';
 
 export const BudgetPlannerView: React.FC = () => {
   const {
@@ -23,6 +24,7 @@ export const BudgetPlannerView: React.FC = () => {
     deleteBudgetItem,
     selectedYear,
     selectedMonth,
+    requestUserConfirmation,
   } = useChurchFinance();
 
   const currency = data.profile.currencySymbol || '₱';
@@ -267,9 +269,14 @@ export const BudgetPlannerView: React.FC = () => {
                         </button>
                         <button
                           onClick={() => {
-                            if (confirm(`Remove budget line for "${item.category}"?`)) {
-                              deleteBudgetItem(item.id);
-                            }
+                            requestUserConfirmation({
+                              title: 'Remove Expense Budget Line?',
+                              message: `Are you sure you want to remove the monthly budget line for "${item.category}"?`,
+                              affectedItem: item.category,
+                              confirmLabel: 'Remove Line',
+                              isDestructive: true,
+                              onConfirm: () => deleteBudgetItem(item.id),
+                            });
                           }}
                           className="p-1 text-slate-400 hover:text-rose-600"
                         >
@@ -353,9 +360,14 @@ export const BudgetPlannerView: React.FC = () => {
                         </button>
                         <button
                           onClick={() => {
-                            if (confirm(`Remove budget goal for "${item.category}"?`)) {
-                              deleteBudgetItem(item.id);
-                            }
+                            requestUserConfirmation({
+                              title: 'Remove Income Goal?',
+                              message: `Are you sure you want to remove the monthly income goal for "${item.category}"?`,
+                              affectedItem: item.category,
+                              confirmLabel: 'Remove Goal',
+                              isDestructive: true,
+                              onConfirm: () => deleteBudgetItem(item.id),
+                            });
                           }}
                           className="p-1 text-slate-400 hover:text-rose-600"
                         >
@@ -415,15 +427,26 @@ export const BudgetPlannerView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Category / Ledger Line</label>
+                <label className="block font-medium text-slate-700 mb-1">
+                  Category / Ledger Line (Select or Type)
+                </label>
                 <input
                   type="text"
+                  list="budget-categories-list"
                   required
                   value={formCategory}
                   onChange={(e) => setFormCategory(e.target.value)}
-                  placeholder="e.g. Utilities: Electric, Sound System, Food Pantry"
+                  placeholder="Select from existing categories or type custom..."
                   className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs"
                 />
+                <datalist id="budget-categories-list">
+                  {(formType === 'income'
+                    ? data.categories?.collectionCategories || DEFAULT_COLLECTION_CATEGORIES
+                    : data.categories?.expenseCategories || DEFAULT_EXPENSE_CATEGORIES
+                  ).map((cat) => (
+                    <option key={cat} value={cat} />
+                  ))}
+                </datalist>
               </div>
 
               <div>

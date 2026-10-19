@@ -36,6 +36,7 @@ interface HelpModalProps {
   onOpenRollover?: () => void;
   onOpenDrive?: () => void;
   onOpenImport?: () => void;
+  onOpenDataMode?: () => void;
 }
 
 interface HelpTopic {
@@ -55,6 +56,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
   onOpenRollover,
   onOpenDrive,
   onOpenImport,
+  onOpenDataMode,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -118,8 +120,21 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                   <span>Choose Your Data Mode (Sample vs Live)</span>
                 </div>
                 <p className="text-slate-600 leading-relaxed">
-                  The app opens in <strong>Demonstration Mode</strong> pre-loaded with benchmark sample data so you can test features and train tellers. When ready to enter real church records, click <strong>Demo Data</strong> in the top bar to start a fresh live ledger or import existing spreadsheets.
+                  The app opens in <strong>Demonstration Mode</strong> pre-loaded with benchmark sample data so you can test features and train tellers. When ready to enter real church records, click <strong>Demo Data</strong> in the top bar or click below to start a fresh live ledger or import existing spreadsheets.
                 </p>
+                {onOpenDataMode && (
+                  <button
+                    onClick={() => {
+                      onOpenDataMode();
+                      onClose();
+                    }}
+                    className="mt-1 text-emerald-700 hover:text-emerald-900 font-semibold inline-flex items-center gap-1"
+                  >
+                    <Rocket className="w-3.5 h-3.5" />
+                    <span>Open Data Mode &amp; Live Switcher</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
               {/* Step 3 */}
@@ -158,33 +173,59 @@ export const HelpModal: React.FC<HelpModalProps> = ({
         content: (
           <div className="space-y-3 text-slate-700 text-xs">
             <p className="text-slate-600">
-              GraceBooks is structured into 6 primary modules accessible from the top navigation bar:
+              GraceBooks is structured into 6 primary modules accessible from the top navigation bar (click any module card below to jump directly to it):
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                <strong className="text-slate-900 block mb-0.5 font-bold">1. Budget Dashboard</strong>
-                <p className="text-slate-600">Real-time total cash in accounts, fund equity totals, income vs expense charts, and discrepancy alerts.</p>
-              </div>
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                <strong className="text-slate-900 block mb-0.5 font-bold">2. Collections (Giving)</strong>
-                <p className="text-slate-600">Tally Sunday tithes, envelopes, and digital giving with Philippine bill/coin denomination count sheets and teller slips.</p>
-              </div>
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                <strong className="text-slate-900 block mb-0.5 font-bold">3. Expenses (Disbursements)</strong>
-                <p className="text-slate-600">Record vendor payments, pastoral honoraria, utilities, and remittances with check/voucher tracking.</p>
-              </div>
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                <strong className="text-slate-900 block mb-0.5 font-bold">4. Funds &amp; Accounts</strong>
-                <p className="text-slate-600">Manage 27 designated church funds, physical bank accounts, inter-fund transfers, and the 1-click Reconciliation Assistant.</p>
-              </div>
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                <strong className="text-slate-900 block mb-0.5 font-bold">5. Budget Planning</strong>
-                <p className="text-slate-600">Set annual and monthly department targets to track spending compliance across the fiscal year.</p>
-              </div>
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                <strong className="text-slate-900 block mb-0.5 font-bold">6. Board Monthly Report</strong>
-                <p className="text-slate-600">Generate printable Foursquare National (10%) and District Office remittance summaries and board reports.</p>
-              </div>
+              {[
+                {
+                  tab: 'dashboard',
+                  title: '1. Budget Dashboard',
+                  desc: 'Real-time total cash in accounts, fund equity totals, income vs expense charts, and discrepancy alerts.',
+                },
+                {
+                  tab: 'collections',
+                  title: '2. Collections (Giving)',
+                  desc: 'Tally Sunday tithes, envelopes, and digital giving with Philippine bill/coin denomination count sheets and teller slips.',
+                },
+                {
+                  tab: 'expenses',
+                  title: '3. Expenses (Disbursements)',
+                  desc: 'Record vendor payments, pastoral honoraria, utilities, and remittances with check/voucher tracking.',
+                },
+                {
+                  tab: 'funds',
+                  title: '4. Funds & Accounts',
+                  desc: 'Manage designated church funds, physical bank accounts, inter-fund transfers, and the 1-click Reconciliation Assistant.',
+                },
+                {
+                  tab: 'budget',
+                  title: '5. Budget Planning',
+                  desc: 'Set annual and monthly department targets to track spending compliance across the fiscal year.',
+                },
+                {
+                  tab: 'reports',
+                  title: '6. Board Monthly Report',
+                  desc: 'Generate printable Foursquare National (10%) and District Office remittance summaries and board reports.',
+                },
+              ].map((m) => (
+                <button
+                  key={m.tab}
+                  type="button"
+                  onClick={() => {
+                    if (onNavigateToTab) {
+                      onNavigateToTab(m.tab);
+                      onClose();
+                    }
+                  }}
+                  className="p-3 bg-slate-50 hover:bg-blue-50/60 border border-slate-200 hover:border-blue-300 rounded-lg text-left transition-colors group"
+                >
+                  <div className="flex items-center justify-between mb-0.5">
+                    <strong className="text-slate-900 group-hover:text-blue-700 font-bold">{m.title}</strong>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600" />
+                  </div>
+                  <p className="text-slate-600">{m.desc}</p>
+                </button>
+              ))}
             </div>
           </div>
         ),
@@ -206,13 +247,13 @@ export const HelpModal: React.FC<HelpModalProps> = ({
               <div className="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-xl space-y-2">
                 <strong className="font-bold text-emerald-950 text-sm block">1. Collection (Giving) Categories</strong>
                 <p className="text-slate-600 leading-relaxed">
-                  When recording a Sunday count sheet or digital offering in <strong>Collections</strong>, entries are categorized by giving purpose and designated fund:
+                  When recording a Sunday count sheet or digital offering in <strong>Collections</strong>, entries are categorized by common giving purposes and designated funds:
                 </p>
                 <ul className="list-disc pl-4 space-y-1 text-slate-700">
                   <li><strong>Tithes &amp; General Offerings</strong>: Allocated to General Operating Fund (101).</li>
-                  <li><strong>Building Pledge &amp; Project</strong>: Assigned to Restricted Building Fund (105).</li>
-                  <li><strong>Missions &amp; Outreach</strong>: Allocated to World/Foreign Mission Fund (102).</li>
-                  <li><strong>CAP &amp; Auxiliaries</strong>: Assigned to CAP (103), UFM, UFW, SKC, or Children&apos;s Church.</li>
+                  <li><strong>Building &amp; Capital Fund Offering</strong>: Assigned to Building &amp; Facilities Fund (103).</li>
+                  <li><strong>Missions &amp; Outreach Offering</strong>: Allocated to Missions &amp; Outreach Fund (102).</li>
+                  <li><strong>Benevolence, Youth &amp; Children</strong>: Assigned to Benevolence, Youth, Children, Worship, or Special Events funds.</li>
                 </ul>
               </div>
 
@@ -220,13 +261,13 @@ export const HelpModal: React.FC<HelpModalProps> = ({
               <div className="p-3.5 bg-rose-50/80 border border-rose-200 rounded-xl space-y-2">
                 <strong className="font-bold text-rose-950 text-sm block">2. Expense Categories &amp; Departments</strong>
                 <p className="text-slate-600 leading-relaxed">
-                  When issuing a disbursement voucher in <strong>Expenses</strong>, select the <strong>Department</strong> and specific <strong>Category</strong>:
+                  When issuing a disbursement voucher in <strong>Expenses</strong>, select the <strong>Department</strong> and common <strong>Category</strong>:
                 </p>
                 <ul className="list-disc pl-4 space-y-1 text-slate-700">
-                  <li><strong>Pastoral &amp; Ministry</strong>: Pastoral support, honoraria, speaker gifts.</li>
-                  <li><strong>Facilities &amp; Operations</strong>: Utilities (Electric/Water), sanctuary repairs, janitorial.</li>
-                  <li><strong>Administration &amp; Remittances</strong>: National/District remittances, office supplies, bank fees.</li>
-                  <li><strong>Missions &amp; Christian Ed</strong>: Tracts, Sunday School materials, youth retreats.</li>
+                  <li><strong>Pastoral &amp; Ministry</strong>: Pastoral salary &amp; housing allowance, staff compensation, worship &amp; media supplies.</li>
+                  <li><strong>Facilities &amp; Operations</strong>: Electricity, water &amp; internet utilities, building &amp; facility maintenance.</li>
+                  <li><strong>Administration</strong>: Office supplies, printing, software, denominational remittances, insurance.</li>
+                  <li><strong>Missions &amp; Christian Ed</strong>: Missions support, benevolence assistance, children &amp; youth curriculum.</li>
                 </ul>
               </div>
             </div>
@@ -506,7 +547,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
               <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-lg">
                 <strong className="text-blue-950 block mb-1">1. Full System Backup (JSON)</strong>
                 <p className="text-slate-600">
-                  Restore an entire annual ledger file (<code>church_financial_data_[year].json</code>). Restores all 27 fund balances, physical bank accounts, collection count sheets, expense payment vouchers, and monthly board report remittance quotas in a single click.
+                  Restore an entire annual ledger file (<code>church_financial_data_[year].json</code>). Restores all designated fund balances, physical bank accounts, collection count sheets, expense payment vouchers, and monthly board report remittance quotas in a single click.
                 </p>
               </div>
 
@@ -666,9 +707,9 @@ export const HelpModal: React.FC<HelpModalProps> = ({
               From the <strong>Church Profile Settings</strong> modal, you can update:
             </p>
             <ul className="list-disc pl-5 space-y-1">
-              <li>Church Name & Denomination</li>
-              <li>Local Address & Headquarters Address</li>
-              <li>District Name (e.g. Romblon Aklan District)</li>
+              <li>Church Name &amp; Denomination</li>
+              <li>Local Address &amp; Headquarters Address</li>
+              <li>District Name (e.g. Central Valley District)</li>
               <li>Senior Pastor, Church Treasurer, and Appointed Auditors</li>
               <li>System Currency Symbol (Preset button for Philippine Peso ₱)</li>
             </ul>
@@ -734,7 +775,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
         ),
       },
     ],
-    [onNavigateToTab, onClose, onOpenProfile, onOpenRollover, onOpenDrive, onOpenImport]
+    [onNavigateToTab, onClose, onOpenProfile, onOpenRollover, onOpenDrive, onOpenImport, onOpenDataMode]
   );
 
   // Filter topics based on search query and category

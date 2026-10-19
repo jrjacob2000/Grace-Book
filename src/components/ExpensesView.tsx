@@ -36,6 +36,7 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
     deleteExpense,
     selectedYear,
     selectedMonth,
+    requestUserConfirmation,
   } = useChurchFinance();
 
   const currency = data.profile.currencySymbol || '₱';
@@ -377,9 +378,14 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
                           </button>
                           <button
                             onClick={() => {
-                              if (confirm('Delete this expense? Fund and account balances will be restored.')) {
-                                deleteExpense(exp.id);
-                              }
+                              requestUserConfirmation({
+                                title: 'Delete Disbursement Record?',
+                                message: `Delete the ${currency}${exp.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} disbursement to "${exp.payee}"? Fund and bank account balances will be restored automatically.`,
+                                affectedItem: `${exp.payee} (${exp.date})`,
+                                confirmLabel: 'Delete Disbursement',
+                                isDestructive: true,
+                                onConfirm: () => deleteExpense(exp.id),
+                              });
                             }}
                             title="Delete Disbursement"
                             className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-slate-100"

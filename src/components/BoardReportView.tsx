@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Printer,
   Download,
@@ -15,14 +15,13 @@ import { BoardReportMeta, FoursquareRemittanceSummary } from '../types/finance';
 export const BoardReportView: React.FC = () => {
   const {
     data,
-    monthCollections,
-    monthExpenses,
     selectedYear,
     selectedMonth,
     updateBoardReportMeta,
   } = useChurchFinance();
 
   const monthKey = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
+  const monthEndPrefix = `${monthKey}-31`;
   const monthName = new Date(selectedYear, selectedMonth - 1).toLocaleString('default', { month: 'long' });
 
   // Month collections & expenses
@@ -34,7 +33,7 @@ export const BoardReportView: React.FC = () => {
     return data.expenses.filter((e) => e.date.startsWith(monthKey) && e.status !== 'void');
   }, [data.expenses, monthKey]);
 
-  // Fund Movements for all funds
+  // Fund Movements for all funds (accurately anchored to the selected month even if later months have entries)
   const fundRows = useMemo(() => {
     return data.funds.map((fund) => {
       const fundCollections = monthCollectionsList
@@ -53,8 +52,28 @@ export const BoardReportView: React.FC = () => {
         .filter((t) => t.date.startsWith(monthKey) && t.fromFundId === fund.id)
         .reduce((sum, t) => sum + t.amount, 0);
 
+      // Back out any transactions recorded in months AFTER the selected month
+      const futureCollections = data.collections
+        .filter((c) => c.fundId === fund.id && c.date > monthEndPrefix)
+        .reduce((sum, c) => sum + c.totalAmount, 0);
+
+      const futureExpenses = data.expenses
+        .filter((e) => e.fundId === fund.id && e.status !== 'void' && e.date > monthEndPrefix)
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      const futureInTransfers = data.transfers
+        .filter((t) => t.toFundId === fund.id && t.date > monthEndPrefix)
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      const futureOutTransfers = data.transfers
+        .filter((t) => t.fromFundId === fund.id && t.date > monthEndPrefix)
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      const futureNetChange =
+        futureCollections - futureExpenses + (futureInTransfers - futureOutTransfers);
+
       const netTransfer = incomingTransfers - outgoingTransfers;
-      const endingBalance = fund.balance;
+      const endingBalance = fund.balance - futureNetChange;
       const beginningBalance = endingBalance - (fundCollections - fundExpenses + netTransfer);
 
       return {
@@ -68,7 +87,7 @@ export const BoardReportView: React.FC = () => {
         endingBalance,
       };
     });
-  }, [data.funds, monthCollectionsList, monthExpensesList, data.transfers, monthKey]);
+  }, [data.funds, data.collections, data.expenses, monthCollectionsList, monthExpensesList, data.transfers, monthKey, monthEndPrefix]);
 
   // Totals of Fund Table
   const totalBeginning = useMemo(() => fundRows.reduce((acc, f) => acc + f.beginningBalance, 0), [fundRows]);
@@ -83,7 +102,7 @@ export const BoardReportView: React.FC = () => {
   }, [fundRows]);
 
   const missionReceipts = useMemo(() => {
-    const f = fundRows.find((r) => r.id === 'fund-mission' || r.name.toLowerCase().includes('mission'));
+    const f = fundRows.find((r) => r.id === 'fund-missions' || r.id === 'fund-mission' || r.name.toLowerCase().includes('mission'));
     return f ? f.receipts : 0;
   }, [fundRows]);
 
@@ -93,7 +112,13 @@ export const BoardReportView: React.FC = () => {
   }, [fundRows]);
 
   const sundaySchoolReceipts = useMemo(() => {
-    const f = fundRows.find((r) => r.id === 'fund-sundayschool' || r.name.toLowerCase().includes('sunday school'));
+    const f = fundRows.find(
+      (r) =>
+        r.id === 'fund-children' ||
+        r.id === 'fund-sundayschool' ||
+        r.name.toLowerCase().includes('sunday school') ||
+        r.name.toLowerCase().includes('children')
+    );
     return f ? f.receipts : 0;
   }, [fundRows]);
 
@@ -122,11 +147,24 @@ export const BoardReportView: React.FC = () => {
     return f ? f.receipts : 0;
   }, [fundRows]);
 
+  // Dynamically calculate 10% of actual Pastoral Salary / Honorarium disbursed in the selected month
+  const autoPastorTithes = useMemo(() => {
+    const pastoralSupport = monthExpensesList
+      .filter(
+        (e) =>
+          e.category.toLowerCase().includes('pastor') ||
+          e.category.toLowerCase().includes('honorarium') ||
+          e.description.toLowerCase().includes('pastoral')
+      )
+      .reduce((sum, e) => sum + e.amount, 0);
+    return Number((pastoralSupport * 0.10).toFixed(2));
+  }, [monthExpensesList]);
+
   // Current or saved remittance
   const savedReportMeta: BoardReportMeta = data.boardReports[monthKey] || {
     month: selectedMonth,
     year: selectedYear,
-    preparedBy: data.profile.treasurer || 'Sis. Evelyn R. Vance',
+    preparedBy: data.profile.treasurer || 'Hannah L. Collins',
     presentedDate: `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-31`,
     boardChairNotes: '',
     treasurerComments: '',
@@ -169,7 +207,7 @@ export const BoardReportView: React.FC = () => {
   const dt80Of10 = savedRemittance.dt80Of10 !== undefined ? savedRemittance.dt80Of10 : districtTitheBase * 0.80;
   const mission80 = savedRemittance.mission80 !== undefined ? savedRemittance.mission80 : missionReceipts * 0.80;
   const sundaySchoolTithes = savedRemittance.sundaySchoolTithes !== undefined ? savedRemittance.sundaySchoolTithes : sundaySchoolReceipts * 0.10;
-  const pastorTithes = savedRemittance.pastorTithes !== undefined ? savedRemittance.pastorTithes : 2200.00; // 10% of pastor honorarium
+  const pastorTithes = savedRemittance.pastorTithes !== undefined ? savedRemittance.pastorTithes : autoPastorTithes;
   const ufmDistrict = savedRemittance.ufmDistrict !== undefined ? savedRemittance.ufmDistrict : ufmReceipts * 0.10;
   const ufwDistrict = savedRemittance.ufwDistrict !== undefined ? savedRemittance.ufwDistrict : ufwReceipts * 0.10;
   const fbcRemittance = savedRemittance.fbcRemittance !== undefined ? savedRemittance.fbcRemittance : fbcReceipts;
@@ -208,6 +246,54 @@ export const BoardReportView: React.FC = () => {
     fbcRemittance,
   });
 
+  // Sync remittanceForm whenever monthKey or computed remittance values update
+  useEffect(() => {
+    setRemittanceForm({
+      districtTitheBase,
+      nos2Percent,
+      dt20Of10,
+      missionOffering20,
+      sundaySchool10Of10,
+      cap100Percent,
+      wbf100Percent,
+      credencialFee100,
+      mrp100Percent,
+      gff10Of10,
+      skc10Of10,
+      ufm10Of10,
+      ufw10Of10,
+      dt80Of10,
+      mission80,
+      sundaySchoolTithes,
+      pastorTithes,
+      ufmDistrict,
+      ufwDistrict,
+      fbcRemittance,
+    });
+  }, [
+    monthKey,
+    districtTitheBase,
+    nos2Percent,
+    dt20Of10,
+    missionOffering20,
+    sundaySchool10Of10,
+    cap100Percent,
+    wbf100Percent,
+    credencialFee100,
+    mrp100Percent,
+    gff10Of10,
+    skc10Of10,
+    ufm10Of10,
+    ufw10Of10,
+    dt80Of10,
+    mission80,
+    sundaySchoolTithes,
+    pastorTithes,
+    ufmDistrict,
+    ufwDistrict,
+    fbcRemittance,
+  ]);
+
   const [copiedSuccess, setCopiedSuccess] = useState(false);
 
   const handleSaveRemittance = (e: React.FormEvent) => {
@@ -236,7 +322,7 @@ export const BoardReportView: React.FC = () => {
       dt80Of10: (genFundReceipts * 0.10) * 0.80,
       mission80: missionReceipts * 0.80,
       sundaySchoolTithes: sundaySchoolReceipts * 0.10,
-      pastorTithes: 2200.00,
+      pastorTithes: autoPastorTithes,
       ufmDistrict: ufmReceipts * 0.10,
       ufwDistrict: ufwReceipts * 0.10,
       fbcRemittance: fbcReceipts,
@@ -252,12 +338,12 @@ export const BoardReportView: React.FC = () => {
   // Export CSV matching exact spreadsheet layout
   const exportSpreadsheetCsv = () => {
     const lines = [
-      `"CHURCH OF THE FOURSQUARE GOSPEL IN THE PHILIPPINES"`,
-      `"1 F. Castillo Street, Project 4, Quezon, City"`,
+      `"${data.profile.denomination || 'GRACE CHRISTIAN FELLOWSHIP INTERNATIONAL'}"`,
+      `"${data.profile.headquartersAddress || '120 Heritage Boulevard, Suite 400, Metro City'}"`,
       `""`,
       `"Church Name:","${data.profile.name}"`,
       `"Address:","${data.profile.address}"`,
-      `"District:","${data.profile.district || 'Romblon Aklan District'}"`,
+      `"District:","${data.profile.district || 'Central Valley District'}"`,
       `"Pastor:","${data.profile.seniorPastor}"`,
       `"MONTHLY CHURCH FINANCIAL REPORT"`,
       `"${monthName.toUpperCase()} ${selectedYear}"`,
@@ -282,8 +368,8 @@ export const BoardReportView: React.FC = () => {
     lines.push(`"Mission Offering 20%","","${missionOffering20.toFixed(2)}","Pastor Tithes","${pastorTithes.toFixed(2)}"`);
     lines.push(`"Sunday School Offering (10% of 10%)","","${sundaySchool10Of10.toFixed(2)}","UFM","${ufmDistrict.toFixed(2)}"`);
     lines.push(`"C.A.P. (100% to be remitted to the Nat'l Off.)","","${cap100Percent.toFixed(2)}","UFW","${ufwDistrict.toFixed(2)}"`);
-    lines.push(`"W.B.F. (100% to be remitted to the Nat'l Off.)","","${wbf100Percent.toFixed(2)}","Foursquare Bible College","${fbcRemittance.toFixed(2)}"`);
-    lines.push(`"Credencial Fee (100% to the remitted to the Nat'l Off.)","","${credencialFee100.toFixed(2)}","Total","${computedDistrictTotal.toFixed(2)}"`);
+    lines.push(`"W.B.F. (100% to be remitted to the Nat'l Off.)","","${wbf100Percent.toFixed(2)}","Bible College Support","${fbcRemittance.toFixed(2)}"`);
+    lines.push(`"Credential Fee (100% to be remitted to the Nat'l Off.)","","${credencialFee100.toFixed(2)}","Total","${computedDistrictTotal.toFixed(2)}"`);
     lines.push(`"MRP (100% to be remitted to the Nat'l Off.)","","${mrp100Percent.toFixed(2)}"`);
     lines.push(`"GFF (10% of the 10% of the actual monthly collection)","","${gff10Of10.toFixed(2)}","Total District Remittance Php","${computedDistrictTotal.toFixed(2)}"`);
     lines.push(`"SKC (10% of the 10% of the actual monthly collection)","","${skc10Of10.toFixed(2)}"`);
@@ -295,15 +381,15 @@ export const BoardReportView: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `CFGP_Monthly_Financial_Report_${monthName}_${selectedYear}.csv`;
+    a.download = `Church_Monthly_Financial_Report_${monthName}_${selectedYear}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   const copyReportSummary = () => {
     const summary = `
-CHURCH OF THE FOURSQUARE GOSPEL IN THE PHILIPPINES
-${data.profile.name} - ${data.profile.district}
+${data.profile.denomination || 'GRACE CHRISTIAN FELLOWSHIP INTERNATIONAL'}
+${data.profile.name} - ${data.profile.district || 'Central Valley District'}
 MONTHLY CHURCH FINANCIAL REPORT - ${monthName.toUpperCase()} ${selectedYear}
 Pastor: ${data.profile.seniorPastor}
 
@@ -329,10 +415,10 @@ REMITTANCE SUMMARY:
       <div className="print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs">
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-            Official Foursquare Monthly Financial Report
+            Monthly Board Financial Report
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Exact spreadsheet template for Church of the Foursquare Gospel in the Philippines
+            Official fund movement statement and denominational remittance summary
           </p>
         </div>
 
@@ -639,10 +725,10 @@ REMITTANCE SUMMARY:
           {/* HEADER SECTION (Rows 1-9) */}
           <div className="border border-slate-400 text-center py-2 bg-white">
             <h1 className="font-bold text-sm tracking-wide text-slate-900">
-              {data.profile.denomination || 'CHURCH OF THE FOURSQUARE GOSPEL IN THE PHILIPPINES'}
+              {data.profile.denomination || 'GRACE CHRISTIAN FELLOWSHIP INTERNATIONAL'}
             </h1>
             <p className="text-xs text-slate-700 mt-0.5">
-              {data.profile.headquartersAddress || '1 F. Castillo Street, Project 4, Quezon, City'}
+              {data.profile.headquartersAddress || '120 Heritage Boulevard, Suite 400, Metro City'}
             </p>
           </div>
 
@@ -657,7 +743,7 @@ REMITTANCE SUMMARY:
             </div>
             <div className="grid grid-cols-12 border-b border-slate-300 py-1 px-3">
               <div className="col-span-3 font-semibold text-slate-800 whitespace-nowrap">District:</div>
-              <div className="col-span-9 text-slate-900">{data.profile.district || 'Romblon Aklan District'}</div>
+              <div className="col-span-9 text-slate-900">{data.profile.district || 'Central Valley District'}</div>
             </div>
             <div className="grid grid-cols-12 py-1 px-3">
               <div className="col-span-3 font-semibold text-slate-800 whitespace-nowrap">Pastor:</div>
@@ -889,13 +975,13 @@ REMITTANCE SUMMARY:
                   <div className="pt-6 grid grid-cols-2 gap-4 text-center text-[10px] text-slate-600">
                     <div>
                       <div className="border-t border-slate-400 pt-1 font-semibold text-slate-800 whitespace-nowrap truncate">
-                        {data.profile.auditor1 || 'Bro. Nelson Morales'}
+                        {data.profile.auditor1 || 'Deacon Samuel T. Brooks'}
                       </div>
                       <span className="whitespace-nowrap">Auditor 1</span>
                     </div>
                     <div>
                       <div className="border-t border-slate-400 pt-1 font-semibold text-slate-800 whitespace-nowrap truncate">
-                        {data.profile.auditor2 || 'Sis. Rachel Perez'}
+                        {data.profile.auditor2 || 'Claire M. Bennett'}
                       </div>
                       <span className="whitespace-nowrap">Auditor 2</span>
                     </div>
@@ -949,7 +1035,7 @@ REMITTANCE SUMMARY:
                   </div>
 
                   <div className="flex items-center justify-between py-1 px-2.5 gap-2">
-                    <span className="font-medium text-slate-800 whitespace-nowrap">Foursquare Bible College</span>
+                    <span className="font-medium text-slate-800 whitespace-nowrap">Bible College Support</span>
                     <span className="shrink-0 text-right font-mono text-slate-700 whitespace-nowrap">
                       {formatCell(fbcRemittance)}
                     </span>
@@ -978,13 +1064,13 @@ REMITTANCE SUMMARY:
                   <div className="pt-6 grid grid-cols-2 gap-4 text-center text-[10px] text-slate-600">
                     <div>
                       <div className="border-t border-slate-400 pt-1 font-semibold text-slate-800 whitespace-nowrap truncate">
-                        {data.profile.treasurer || 'Church Treasurer'}
+                        {data.profile.treasurer || 'Hannah L. Collins'}
                       </div>
                       <span className="whitespace-nowrap">Prepared by</span>
                     </div>
                     <div>
                       <div className="border-t border-slate-400 pt-1 font-semibold text-slate-800 whitespace-nowrap truncate">
-                        {data.profile.seniorPastor || 'Pastor Andrew R. Tiaga'}
+                        {data.profile.seniorPastor || 'Rev. Daniel S. Mercer'}
                       </div>
                       <span className="whitespace-nowrap">Attested by</span>
                     </div>

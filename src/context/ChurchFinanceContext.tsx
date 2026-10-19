@@ -159,15 +159,26 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       const saved = localStorage.getItem(key);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && parsed.funds && parsed.funds.length >= 20) {
+        // Auto-upgrade cached demo data from earlier template versions to the new fictional sample data
+        if (
+          parsed &&
+          (parsed.isDemoData || parsed.profile?.name?.includes('Odiongan')) &&
+          parsed.version !== INITIAL_CHURCH_DATA.version
+        ) {
+          if (year === 2026) {
+            localStorage.setItem(key, JSON.stringify(INITIAL_CHURCH_DATA));
+            return INITIAL_CHURCH_DATA;
+          }
+        }
+        if (parsed && Array.isArray(parsed.funds) && parsed.funds.length > 0) {
           if (!parsed.profile.currencySymbol || parsed.profile.currencySymbol === '$') {
             parsed.profile.currencySymbol = '₱';
           }
           if (parsed.profile.auditor1 === undefined) {
-            parsed.profile.auditor1 = 'Bro. Nelson Morales';
+            parsed.profile.auditor1 = 'Deacon Samuel T. Brooks';
           }
           if (!parsed.profile.auditor2) {
-            parsed.profile.auditor2 = 'Sis. Rachel Perez';
+            parsed.profile.auditor2 = 'Claire M. Bennett';
           }
           if (!parsed.categories || !parsed.categories.collectionCategories) {
             parsed.categories = {
@@ -185,10 +196,29 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
     if (year === 2026) {
       return INITIAL_CHURCH_DATA;
     }
-    // Or generate starter year structure
+    // Check if 2026 data exists in storage to inherit church profile, categories, and live/demo mode
+    let inheritedProfile = INITIAL_CHURCH_DATA.profile;
+    let inheritedCategories = INITIAL_CHURCH_DATA.categories;
+    let inheritedIsDemo = false;
+    try {
+      const ref2026 = localStorage.getItem(getStorageKeyForYear(2026));
+      if (ref2026) {
+        const parsedRef = JSON.parse(ref2026);
+        if (parsedRef?.profile) inheritedProfile = parsedRef.profile;
+        if (parsedRef?.categories) inheritedCategories = parsedRef.categories;
+        if (parsedRef?.isDemoData !== undefined) inheritedIsDemo = parsedRef.isDemoData;
+      }
+    } catch {
+      // ignore
+    }
     return {
       ...INITIAL_CHURCH_DATA,
       fiscalYear: year,
+      isDemoData: inheritedIsDemo,
+      profile: inheritedProfile,
+      categories: inheritedCategories,
+      funds: INITIAL_CHURCH_DATA.funds.map((f) => ({ ...f, balance: 0 })),
+      accounts: INITIAL_CHURCH_DATA.accounts.map((a) => ({ ...a, balance: 0 })),
       collections: [],
       expenses: [],
       transfers: [],
@@ -528,10 +558,17 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         }));
 
         const nextYearData: ChurchFinancialData = {
-          version: '2.0.0',
+          version: INITIAL_CHURCH_DATA.version,
           fiscalYear: targetNextYear,
           isYearClosed: false,
+          isDemoData: data.isDemoData,
           profile: { ...data.profile },
+          categories: data.categories
+            ? {
+                collectionCategories: [...data.categories.collectionCategories],
+                expenseCategories: [...data.categories.expenseCategories],
+              }
+            : undefined,
           funds: nextYearFunds,
           accounts: nextYearAccounts,
           collections: [], // Fresh collections for the new year
@@ -660,6 +697,7 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       const accountMap: Record<string, number> = {};
 
       prepared.forEach((item) => {
+        if (item.status === 'void') return;
         fundMap[item.fundId] = (fundMap[item.fundId] || 0) + (Number(item.amount) || 0);
         accountMap[item.accountId] = (accountMap[item.accountId] || 0) + (Number(item.amount) || 0);
       });
@@ -681,22 +719,23 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const resetToSampleData = () => {
-    const churchName = data.profile?.name || 'Church';
-    const districtName = data.profile?.district || 'District';
     requestUserConfirmation({
-      title: `Reset to Official Sample Data for ${churchName}?`,
-      message: `This will reset all 27 funds, accounts, collections, and expenses for ${selectedYear} back to the official ${districtName} sample template. Your church profile settings will be preserved.`,
-      confirmLabel: 'Reset Data',
+      title: 'Reset to Fictional Sample Dataset?',
+      message: `This will reset all designated funds, bank accounts, collections, expenses, and categories for ${selectedYear} back to the fictional demonstration dataset.`,
+      confirmLabel: 'Load Sample Data',
       isDestructive: true,
       onConfirm: () => {
         const resetData: ChurchFinancialData = {
           ...INITIAL_CHURCH_DATA,
           fiscalYear: selectedYear,
           isDemoData: true,
-          profile: {
-            ...INITIAL_CHURCH_DATA.profile,
-            ...data.profile, // Preserve user's configured church profile name & officers
-          },
+          profile:
+            data.isDemoData || data.profile?.name?.includes('Odiongan')
+              ? { ...INITIAL_CHURCH_DATA.profile }
+              : {
+                  ...INITIAL_CHURCH_DATA.profile,
+                  ...data.profile,
+                },
         };
         setData(resetData);
         persistLocally(resetData, selectedYear);
@@ -834,13 +873,14 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       id,
       createdAt: new Date().toISOString(),
     };
+    const effectiveDeduction = item.status === 'void' ? 0 : item.amount;
 
     updateData((prev) => {
       const funds = prev.funds.map((f) =>
-        f.id === item.fundId ? { ...f, balance: f.balance - item.amount } : f
+        f.id === item.fundId ? { ...f, balance: f.balance - effectiveDeduction } : f
       );
       const accounts = prev.accounts.map((a) =>
-        a.id === item.accountId ? { ...a, balance: a.balance - item.amount } : a
+        a.id === item.accountId ? { ...a, balance: a.balance - effectiveDeduction } : a
       );
 
       return {
@@ -857,28 +897,31 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       const oldItem = prev.expenses.find((e) => e.id === updatedItem.id);
       if (!oldItem) return prev;
 
+      const oldDeduction = oldItem.status === 'void' ? 0 : oldItem.amount;
+      const newDeduction = updatedItem.status === 'void' ? 0 : updatedItem.amount;
+
       let funds = [...prev.funds];
       if (oldItem.fundId === updatedItem.fundId) {
-        const diff = updatedItem.amount - oldItem.amount;
+        const diff = newDeduction - oldDeduction;
         funds = funds.map((f) => (f.id === updatedItem.fundId ? { ...f, balance: f.balance - diff } : f));
       } else {
         funds = funds.map((f) => {
-          if (f.id === oldItem.fundId) return { ...f, balance: f.balance + oldItem.amount };
-          if (f.id === updatedItem.fundId) return { ...f, balance: f.balance - updatedItem.amount };
+          if (f.id === oldItem.fundId) return { ...f, balance: f.balance + oldDeduction };
+          if (f.id === updatedItem.fundId) return { ...f, balance: f.balance - newDeduction };
           return f;
         });
       }
 
       let accounts = [...prev.accounts];
       if (oldItem.accountId === updatedItem.accountId) {
-        const diff = updatedItem.amount - oldItem.amount;
+        const diff = newDeduction - oldDeduction;
         accounts = accounts.map((a) =>
           a.id === updatedItem.accountId ? { ...a, balance: a.balance - diff } : a
         );
       } else {
         accounts = accounts.map((a) => {
-          if (a.id === oldItem.accountId) return { ...a, balance: a.balance + oldItem.amount };
-          if (a.id === updatedItem.accountId) return { ...a, balance: a.balance - updatedItem.amount };
+          if (a.id === oldItem.accountId) return { ...a, balance: a.balance + oldDeduction };
+          if (a.id === updatedItem.accountId) return { ...a, balance: a.balance - newDeduction };
           return a;
         });
       }
@@ -897,11 +940,13 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       const item = prev.expenses.find((e) => e.id === id);
       if (!item) return prev;
 
+      const restoredAmount = item.status === 'void' ? 0 : item.amount;
+
       const funds = prev.funds.map((f) =>
-        f.id === item.fundId ? { ...f, balance: f.balance + item.amount } : f
+        f.id === item.fundId ? { ...f, balance: f.balance + restoredAmount } : f
       );
       const accounts = prev.accounts.map((a) =>
-        a.id === item.accountId ? { ...a, balance: a.balance + item.amount } : a
+        a.id === item.accountId ? { ...a, balance: a.balance + restoredAmount } : a
       );
 
       return {
