@@ -338,7 +338,16 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     } catch (err: any) {
       console.error(`Drive lookup error for year ${year}:`, err);
-      setSyncError(err.message || 'Unable to read from Google Drive');
+      const msg = err?.message || 'Unable to read from Google Drive';
+      if (
+        msg.includes('ACCESS_TOKEN_SCOPE_INSUFFICIENT') ||
+        msg.includes('permission box was left unchecked') ||
+        msg.includes('401')
+      ) {
+        markNeedsDriveConsentPrompt();
+        setAccessToken(null);
+      }
+      setSyncError(msg);
       setSyncStatus('error');
     }
   }, [persistLocally]);
@@ -432,7 +441,16 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       return true;
     } catch (err: any) {
       console.error('Drive save error:', err);
-      setSyncError(err.message || `Error saving ${activeFileName} to Google Drive`);
+      const msg = err?.message || `Error saving ${activeFileName} to Google Drive`;
+      if (
+        msg.includes('ACCESS_TOKEN_SCOPE_INSUFFICIENT') ||
+        msg.includes('permission box was left unchecked') ||
+        msg.includes('401')
+      ) {
+        markNeedsDriveConsentPrompt();
+        setAccessToken(null);
+      }
+      setSyncError(msg);
       setSyncStatus('error');
       return false;
     }

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useChurchFinance } from '../context/ChurchFinanceContext';
 import { Fund, Account, FundTransfer, FundType, AccountType } from '../types/finance';
+import { toSafeNumber } from '../lib/security';
 
 interface FundsAndAccountsViewProps {
   isTransferModalOpen: boolean;
@@ -127,25 +128,28 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
 
   const handleSaveFund = (e: React.FormEvent) => {
     e.preventDefault();
+    const safeBalance = toSafeNumber(fundBalance, 0);
+    const safeTarget = fundTarget ? toSafeNumber(fundTarget, 0) : undefined;
+
     if (editingFund) {
       updateFund({
         ...editingFund,
-        name: fundName,
-        code: fundCode,
+        name: fundName.trim(),
+        code: fundCode.trim(),
         type: fundType,
-        description: fundDescription,
-        balance: Number(fundBalance),
-        targetBalance: Number(fundTarget) || undefined,
+        description: fundDescription.trim(),
+        balance: safeBalance,
+        targetBalance: safeTarget,
         color: fundColor,
       });
     } else {
       addFund({
-        name: fundName,
-        code: fundCode,
+        name: fundName.trim(),
+        code: fundCode.trim(),
         type: fundType,
-        description: fundDescription,
-        balance: Number(fundBalance),
-        targetBalance: Number(fundTarget) || undefined,
+        description: fundDescription.trim(),
+        balance: safeBalance,
+        targetBalance: safeTarget,
         color: fundColor,
       });
     }
@@ -177,23 +181,24 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
 
   const handleSaveAccount = (e: React.FormEvent) => {
     e.preventDefault();
+    const safeBalance = toSafeNumber(accountBalance, 0);
     if (editingAccount) {
       updateAccount({
         ...editingAccount,
-        name: accountName,
+        name: accountName.trim(),
         type: accountType,
-        institution: accountInstitution,
-        accountNumberLast4: accountLast4,
-        balance: Number(accountBalance),
+        institution: accountInstitution.trim(),
+        accountNumberLast4: accountLast4.trim(),
+        balance: safeBalance,
         lastReconciledDate: accountReconciledDate,
       });
     } else {
       addAccount({
-        name: accountName,
+        name: accountName.trim(),
         type: accountType,
-        institution: accountInstitution,
-        accountNumberLast4: accountLast4,
-        balance: Number(accountBalance),
+        institution: accountInstitution.trim(),
+        accountNumberLast4: accountLast4.trim(),
+        balance: safeBalance,
         lastReconciledDate: accountReconciledDate,
       });
     }
@@ -205,7 +210,8 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
 
   const handleTransfer = (e: React.FormEvent) => {
     e.preventDefault();
-    if (transferAmount <= 0 || isNoOpTransfer) {
+    const safeTransferAmount = Math.max(0, toSafeNumber(transferAmount, 0));
+    if (safeTransferAmount <= 0 || isNoOpTransfer) {
       return;
     }
 
@@ -215,9 +221,9 @@ export const FundsAndAccountsView: React.FC<FundsAndAccountsViewProps> = ({
       toFundId,
       fromAccountId,
       toAccountId,
-      amount: Number(transferAmount),
-      reason: transferReason,
-      authorizedBy: transferAuthorizedBy,
+      amount: safeTransferAmount,
+      reason: transferReason.trim(),
+      authorizedBy: transferAuthorizedBy.trim(),
     });
     setIsTransferModalOpen(false);
   };

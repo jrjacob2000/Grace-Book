@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   TrendingUp,
   TrendingDown,
@@ -146,6 +146,31 @@ export const Dashboard: React.FC<DashboardProps> = ({
       };
     });
   }, [data.budget, data.expenses, monthStr]);
+
+  // Fund filter state
+  const [fundFilter, setFundFilter] = useState<'all' | 'unrestricted' | 'restricted'>('all');
+
+  const filteredFunds = useMemo(() => {
+    if (fundFilter === 'all') return data.funds;
+    if (fundFilter === 'unrestricted') return data.funds.filter((f) => f.type === 'unrestricted');
+    return data.funds.filter((f) => f.type !== 'unrestricted');
+  }, [data.funds, fundFilter]);
+
+  const operatingFundsCount = useMemo(() => {
+    return data.funds.filter((f) => f.type === 'unrestricted').length;
+  }, [data.funds]);
+
+  const restrictedFundsCount = useMemo(() => {
+    return data.funds.filter((f) => f.type !== 'unrestricted').length;
+  }, [data.funds]);
+
+  const departmentsOnTrackCount = useMemo(() => {
+    return departmentBudgetBreakdown.filter((d) => d.percent <= 100).length;
+  }, [departmentBudgetBreakdown]);
+
+  const remainingOperatingBudget = useMemo(() => {
+    return Math.max(0, totalMonthlyExpenseBudget - monthExpenses);
+  }, [totalMonthlyExpenseBudget, monthExpenses]);
 
   return (
     <div className="space-y-6 pb-12">
@@ -514,107 +539,130 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* REAL-TIME BUDGET VISUALIZATION SECTION */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column (2 cols): Budget vs Actual Visual Bars */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-bold text-slate-900 text-base">
-                Real-Time Budget Status & Stewardship Overview
-              </h3>
-              <p className="text-xs text-slate-500">
-                Tracking monthly departmental caps and collection targets
-              </p>
-            </div>
-            <button
-              onClick={() => onNavigate('budget')}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
-            >
-              Configure Budgets →
-            </button>
-          </div>
-
-          {/* High-level gauges */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-            {/* Income Progress Card */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <div className="flex justify-between items-center text-xs mb-1.5">
-                <span className="font-semibold text-slate-700">Total Monthly Receipts</span>
-                <span className="font-mono font-bold text-emerald-700">{incomeBudgetPercent}% of Target</span>
+        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between overflow-hidden h-full">
+          <div className="p-6 space-y-6 flex-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">
+                  Real-Time Budget Status & Stewardship Overview
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Tracking monthly departmental caps and collection targets
+                </p>
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
-                <div
-                  className="bg-emerald-600 h-3 rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min(incomeBudgetPercent, 100)}%` }}
-                />
-              </div>
-              <div className="flex justify-between items-center text-[11px] text-slate-500 mt-2 font-mono">
-                <span>Actual: {currency}{monthCollections.toLocaleString()}</span>
-                <span>Budget: {currency}{totalMonthlyIncomeBudget.toLocaleString()}</span>
-              </div>
+              <button
+                onClick={() => onNavigate('budget')}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                Configure Budgets →
+              </button>
             </div>
 
-            {/* Expense Consumption Card */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <div className="flex justify-between items-center text-xs mb-1.5">
-                <span className="font-semibold text-slate-700">Operating Budget Consumed</span>
-                <span className={`font-mono font-bold ${expenseBudgetPercent > 100 ? 'text-rose-600' : 'text-slate-800'}`}>
-                  {expenseBudgetPercent}% Spent
-                </span>
+            {/* High-level gauges */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+              {/* Income Progress Card */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="flex justify-between items-center text-xs mb-1.5">
+                  <span className="font-semibold text-slate-700">Total Monthly Receipts</span>
+                  <span className="font-mono font-bold text-emerald-700">{incomeBudgetPercent}% of Target</span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+                  <div
+                    className="bg-emerald-600 h-3 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(incomeBudgetPercent, 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between items-center text-[11px] text-slate-500 mt-2 font-mono">
+                  <span>Actual: {currency}{monthCollections.toLocaleString()}</span>
+                  <span>Budget: {currency}{totalMonthlyIncomeBudget.toLocaleString()}</span>
+                </div>
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
-                <div
-                  className={`h-3 rounded-full transition-all duration-500 ${
-                    expenseBudgetPercent > 100 ? 'bg-rose-500' : expenseBudgetPercent > 85 ? 'bg-amber-500' : 'bg-blue-600'
-                  }`}
-                  style={{ width: `${Math.min(expenseBudgetPercent, 100)}%` }}
-                />
-              </div>
-              <div className="flex justify-between items-center text-[11px] text-slate-500 mt-2 font-mono">
-                <span>Disbursed: {currency}{monthExpenses.toLocaleString()}</span>
-                <span>Cap: {currency}{totalMonthlyExpenseBudget.toLocaleString()}</span>
+
+              {/* Expense Consumption Card */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="flex justify-between items-center text-xs mb-1.5">
+                  <span className="font-semibold text-slate-700">Operating Budget Consumed</span>
+                  <span className={`font-mono font-bold ${expenseBudgetPercent > 100 ? 'text-rose-600' : 'text-slate-800'}`}>
+                    {expenseBudgetPercent}% Spent
+                  </span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+                  <div
+                    className={`h-3 rounded-full transition-all duration-500 ${
+                      expenseBudgetPercent > 100 ? 'bg-rose-500' : expenseBudgetPercent > 85 ? 'bg-amber-500' : 'bg-blue-600'
+                    }`}
+                    style={{ width: `${Math.min(expenseBudgetPercent, 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between items-center text-[11px] text-slate-500 mt-2 font-mono">
+                  <span>Disbursed: {currency}{monthExpenses.toLocaleString()}</span>
+                  <span>Cap: {currency}{totalMonthlyExpenseBudget.toLocaleString()}</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Departmental Progress Bars */}
-          <div className="space-y-4 pt-2">
-            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Departmental Budget Status ({monthName})
-            </h4>
+            {/* Departmental Progress Bars */}
+            <div className="space-y-4 pt-2">
+              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Departmental Budget Status ({monthName})
+              </h4>
 
-            <div className="space-y-3.5">
-              {departmentBudgetBreakdown.map((dept) => (
-                <div key={dept.department} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-slate-800">{dept.department}</span>
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-slate-600">
-                        {currency}{dept.actualSpent.toLocaleString()} / {currency}{dept.monthlyBudget.toLocaleString()}
-                      </span>
-                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                        dept.percent > 100 ? 'bg-rose-100 text-rose-800' : dept.percent >= 85 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
-                      }`}>
-                        {dept.percent}%
-                      </span>
+              <div className="space-y-3.5 max-h-[220px] overflow-y-auto pr-1">
+                {departmentBudgetBreakdown.map((dept) => (
+                  <div key={dept.department} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-slate-800">{dept.department}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-slate-600">
+                          {currency}{dept.actualSpent.toLocaleString()} / {currency}{dept.monthlyBudget.toLocaleString()}
+                        </span>
+                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                          dept.percent > 100 ? 'bg-rose-100 text-rose-800' : dept.percent >= 85 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          {dept.percent}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                      <div
+                        className={`h-2 rounded-full transition-all duration-500 ${dept.statusColor}`}
+                        style={{ width: `${Math.min(dept.percent, 100)}%` }}
+                      />
                     </div>
                   </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                    <div
-                      className={`h-2 rounded-full transition-all duration-500 ${dept.statusColor}`}
-                      style={{ width: `${Math.min(dept.percent, 100)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Departmental Summary Footer */}
+          <div className="border-t border-slate-100 bg-slate-50/70 px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 text-xs mt-auto">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span className="text-slate-700">
+                <strong className="text-slate-900 font-semibold">{departmentsOnTrackCount} of {departmentBudgetBreakdown.length}</strong> departments on track
+              </span>
+            </div>
+            <div className="flex items-center gap-2 font-mono text-xs">
+              <span className="text-slate-500">Remaining Operating Cap:</span>
+              <span className="font-bold text-slate-800">
+                {currency}{remainingOperatingBudget.toLocaleString()}
+              </span>
             </div>
           </div>
         </div>
 
         {/* Right Column: Fund Balances Breakdown */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
+        <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex items-center justify-between mb-1">
               <div>
-                <h3 className="font-bold text-slate-900 text-base">Fund Balances</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-slate-900 text-base">Fund Balances</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                    {data.funds.length} Funds
+                  </span>
+                </div>
                 <p className="text-xs text-slate-500">Designated & Operating Reserves</p>
               </div>
               <button
@@ -625,8 +673,43 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </button>
             </div>
 
-            <div className="space-y-3">
-              {data.funds.map((fund) => {
+            {/* Fund Filter Tabs */}
+            <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg text-xs my-3">
+              <button
+                onClick={() => setFundFilter('all')}
+                className={`flex-1 py-1 rounded-md font-medium text-[11px] transition-colors cursor-pointer ${
+                  fundFilter === 'all'
+                    ? 'bg-white text-slate-900 shadow-xs font-semibold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                All ({data.funds.length})
+              </button>
+              <button
+                onClick={() => setFundFilter('unrestricted')}
+                className={`flex-1 py-1 rounded-md font-medium text-[11px] transition-colors cursor-pointer ${
+                  fundFilter === 'unrestricted'
+                    ? 'bg-white text-slate-900 shadow-xs font-semibold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Operating ({operatingFundsCount})
+              </button>
+              <button
+                onClick={() => setFundFilter('restricted')}
+                className={`flex-1 py-1 rounded-md font-medium text-[11px] transition-colors cursor-pointer ${
+                  fundFilter === 'restricted'
+                    ? 'bg-white text-slate-900 shadow-xs font-semibold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Restricted ({restrictedFundsCount})
+              </button>
+            </div>
+
+            {/* Scrollable Fund Cards Container filling available height */}
+            <div className="space-y-2.5 overflow-y-auto pr-1 flex-1 min-h-[260px] max-h-[360px] lg:max-h-[380px]">
+              {filteredFunds.map((fund) => {
                 const percentOfTotal = totalFundBalances > 0
                   ? Math.round((fund.balance / totalFundBalances) * 100)
                   : 0;
@@ -638,24 +721,30 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 return (
                   <div
                     key={fund.id}
-                    className="p-3 rounded-lg border border-slate-100 bg-slate-50/70 hover:bg-slate-50 transition-colors"
+                    className="p-2.5 rounded-lg border border-slate-100 bg-slate-50/70 hover:bg-slate-50 transition-colors"
                   >
                     <div className="flex items-start justify-between">
-                      <div>
+                      <div className="min-w-0 pr-2">
                         <div className="flex items-center gap-2">
                           <span
                             className="w-2.5 h-2.5 rounded-full shrink-0"
                             style={{ backgroundColor: fund.color || '#3b82f6' }}
                           />
-                          <span className="font-semibold text-slate-800 text-xs">
+                          <span className="font-semibold text-slate-800 text-xs truncate">
                             {fund.name}
                           </span>
                         </div>
-                        <span className="text-[11px] text-slate-500 ml-4.5 block mt-0.5">
-                          {fund.type === 'unrestricted' ? 'Operating' : 'Restricted / Designated'}
-                        </span>
+                        <div className="flex items-center gap-1.5 ml-4.5 mt-0.5 text-[10px]">
+                          <span className="text-slate-500">
+                            {fund.type === 'unrestricted' ? 'Operating' : 'Restricted'}
+                          </span>
+                          <span className="text-slate-300">•</span>
+                          <span className="text-slate-400">
+                            {percentOfTotal}% of total
+                          </span>
+                        </div>
                       </div>
-                      <span className="font-mono font-bold text-slate-900 text-xs">
+                      <span className="font-mono font-bold text-slate-900 text-xs shrink-0">
                         {currency}{fund.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
@@ -683,7 +772,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-100 mt-4">
+          {/* Pinned Equity Footer */}
+          <div className="pt-3 border-t border-slate-100 mt-auto">
             <div className="flex justify-between items-center text-xs">
               <span className="font-semibold text-slate-700">Total Fund Equity:</span>
               <span className="font-mono font-bold text-slate-900 text-sm">

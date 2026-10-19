@@ -38,6 +38,23 @@ export function clearDriveCache(): void {
 }
 
 /**
+ * Centrally translates Google Drive API errors (such as expired tokens or missing scopes)
+ * into friendly, actionable error messages.
+ */
+async function handleDriveApiError(response: Response, action: string): Promise<never> {
+  const errorText = await response.text();
+  if (response.status === 401) {
+    throw new Error('Google Drive session expired or unauthorized (401). Please click "Connect Drive" to re-authenticate.');
+  }
+  if (response.status === 403 && errorText.includes('ACCESS_TOKEN_SCOPE_INSUFFICIENT')) {
+    throw new Error(
+      'Google Drive permission box was left unchecked during sign-in. Please sign out, click "Connect Drive" again, and check the box to allow Google Drive file access.'
+    );
+  }
+  throw new Error(`Google Drive ${action} failed (${response.status}): ${errorText}`);
+}
+
+/**
  * Finds or creates the dedicated "GraceBooks Church Finance" folder in Google Drive.
  */
 export async function getOrCreateDedicatedFolder(accessToken: string): Promise<DriveFolderInfo> {
@@ -81,8 +98,7 @@ export async function getOrCreateDedicatedFolder(accessToken: string): Promise<D
   });
 
   if (!createRes.ok) {
-    const errorText = await createRes.text();
-    throw new Error(`Failed to create dedicated folder on Google Drive (${createRes.status}): ${errorText}`);
+    await handleDriveApiError(createRes, 'create dedicated folder');
   }
 
   cachedFolder = (await createRes.json()) as DriveFolderInfo;
@@ -154,13 +170,7 @@ export async function findDriveFileForYear(
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    if (response.status === 403 && errorText.includes('ACCESS_TOKEN_SCOPE_INSUFFICIENT')) {
-      throw new Error(
-        'Google Drive permission box was left unchecked during sign-in. Please sign out (or remove app access at myaccount.google.com/permissions), click "Connect Drive" again, and check the box to allow Google Drive file access.'
-      );
-    }
-    throw new Error(`Google Drive search failed (${response.status}): ${errorText}`);
+    await handleDriveApiError(response, 'search files');
   }
 
   const data = await response.json();
@@ -255,8 +265,7 @@ export async function readFinancialDataFromDrive(
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to load file from Google Drive (${response.status}): ${errorText}`);
+    await handleDriveApiError(response, 'load file');
   }
 
   const rawText = await response.text();
@@ -311,8 +320,7 @@ export async function createFinancialDataFileInDrive(
   );
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to create file on Google Drive (${response.status}): ${errorText}`);
+    await handleDriveApiError(response, 'create file');
   }
 
   return (await response.json()) as DriveFileInfo;
@@ -341,8 +349,7 @@ export async function updateFinancialDataInDrive(
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to update Google Drive file (${response.status}): ${errorText}`);
+    await handleDriveApiError(response, 'update file');
   }
 
   return (await response.json()) as DriveFileInfo;
@@ -368,7 +375,6 @@ export async function deleteFinancialDataFileFromDrive(
   });
 
   if (!response.ok && response.status !== 204) {
-    const errorText = await response.text();
-    throw new Error(`Failed to delete Google Drive file (${response.status}): ${errorText}`);
+    await handleDriveApiError(response, 'delete file');
   }
 }

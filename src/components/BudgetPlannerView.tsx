@@ -16,6 +16,7 @@ import {
 import { useChurchFinance } from '../context/ChurchFinanceContext';
 import { BudgetItem } from '../types/finance';
 import { DEFAULT_COLLECTION_CATEGORIES, DEFAULT_EXPENSE_CATEGORIES } from '../data/initialData';
+import { toSafeNumber } from '../lib/security';
 
 export const BudgetPlannerView: React.FC = () => {
   const {
@@ -72,26 +73,31 @@ export const BudgetPlannerView: React.FC = () => {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    const safeMonthly = Math.max(0, toSafeNumber(formMonthlyBudget, 0));
+    const safeAnnual = formAnnualBudget
+      ? Math.max(0, toSafeNumber(formAnnualBudget, 0))
+      : safeMonthly * 12;
+
     if (editingItem) {
       updateBudgetItem({
         ...editingItem,
         type: formType,
-        category: formCategory,
-        department: formDepartment,
+        category: formCategory.trim(),
+        department: formDepartment.trim(),
         fundId: formFundId,
-        monthlyBudget: Number(formMonthlyBudget),
-        annualBudget: Number(formAnnualBudget) || Number(formMonthlyBudget) * 12,
-        notes: formNotes,
+        monthlyBudget: safeMonthly,
+        annualBudget: safeAnnual,
+        notes: formNotes.trim(),
       });
     } else {
       addBudgetItem({
         type: formType,
-        category: formCategory,
-        department: formDepartment,
+        category: formCategory.trim(),
+        department: formDepartment.trim(),
         fundId: formFundId,
-        monthlyBudget: Number(formMonthlyBudget),
-        annualBudget: Number(formAnnualBudget) || Number(formMonthlyBudget) * 12,
-        notes: formNotes,
+        monthlyBudget: safeMonthly,
+        annualBudget: safeAnnual,
+        notes: formNotes.trim(),
       });
     }
     setIsModalOpen(false);

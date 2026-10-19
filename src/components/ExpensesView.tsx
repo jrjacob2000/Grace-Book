@@ -20,7 +20,7 @@ import {
 import { useChurchFinance } from '../context/ChurchFinanceContext';
 import { ExpenseItem, PaymentMethod, ExpenseStatus } from '../types/finance';
 import { DEFAULT_EXPENSE_CATEGORIES } from '../data/initialData';
-import { escapeCsvCell } from '../lib/security';
+import { escapeCsvCell, toSafeNumber } from '../lib/security';
 
 interface ExpensesViewProps {
   isModalOpen: boolean;
@@ -127,37 +127,38 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const safeAmount = Math.max(0, toSafeNumber(formAmount, 0));
     if (editingItem) {
       updateExpense({
         ...editingItem,
         date: formDate,
-        payee: formPayee,
-        amount: Number(formAmount),
+        payee: formPayee.trim(),
+        amount: safeAmount,
         department: formDepartment,
         category: formCategory,
         fundId: formFundId,
         accountId: formAccountId,
         paymentMethod: formMethod,
-        checkNumber: formCheckNumber,
-        invoiceNumber: formInvoiceNumber,
-        description: formDescription,
-        approvedBy: formApprovedBy,
+        checkNumber: formCheckNumber.trim(),
+        invoiceNumber: formInvoiceNumber.trim(),
+        description: formDescription.trim(),
+        approvedBy: formApprovedBy.trim(),
         status: formStatus,
       });
     } else {
       addExpense({
         date: formDate,
-        payee: formPayee,
-        amount: Number(formAmount),
+        payee: formPayee.trim(),
+        amount: safeAmount,
         department: formDepartment,
         category: formCategory,
         fundId: formFundId,
         accountId: formAccountId,
         paymentMethod: formMethod,
-        checkNumber: formCheckNumber,
-        invoiceNumber: formInvoiceNumber,
-        description: formDescription,
-        approvedBy: formApprovedBy,
+        checkNumber: formCheckNumber.trim(),
+        invoiceNumber: formInvoiceNumber.trim(),
+        description: formDescription.trim(),
+        approvedBy: formApprovedBy.trim(),
         status: formStatus,
       });
     }

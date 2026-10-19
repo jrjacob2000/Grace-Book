@@ -151,6 +151,7 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
       setParsedJson(null);
     };
     reader.readAsText(file);
+    e.target.value = '';
   };
 
   // Execute JSON Import
@@ -335,6 +336,7 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
       setCollectionsCsvText((event.target?.result as string) || '');
     };
     reader.readAsText(file);
+    e.target.value = '';
   };
 
   // Execute Collections CSV Import
@@ -501,6 +503,7 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
       setExpensesCsvText((event.target?.result as string) || '');
     };
     reader.readAsText(file);
+    e.target.value = '';
   };
 
   // Execute Expenses CSV Import

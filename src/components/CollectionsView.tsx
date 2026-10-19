@@ -22,7 +22,7 @@ import {
 import { useChurchFinance } from '../context/ChurchFinanceContext';
 import { CollectionItem, ServiceType, CashBreakdown } from '../types/finance';
 import { DEFAULT_COLLECTION_CATEGORIES } from '../data/initialData';
-import { escapeCsvCell } from '../lib/security';
+import { escapeCsvCell, toSafeNumber } from '../lib/security';
 
 interface CollectionsViewProps {
   isModalOpen: boolean;
@@ -184,6 +184,11 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
     e.preventDefault();
     const counters = [formCounter1, formCounter2].filter(Boolean);
 
+    const safeChecks = Math.max(0, toSafeNumber(formChecksAmount, 0));
+    const safeDigital = Math.max(0, toSafeNumber(formDigitalAmount, 0));
+    const safeCash = Math.max(0, toSafeNumber(computedCashTotal, 0));
+    const safeTotal = safeCash + safeChecks + safeDigital;
+
     if (editingItem) {
       updateCollection({
         ...editingItem,
@@ -192,10 +197,10 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
         fundId: formFundId,
         accountId: formAccountId,
         category: formCategory,
-        totalAmount: computedTotalOffering,
-        cashAmount: computedCashTotal,
-        checksAmount: Number(formChecksAmount || 0),
-        digitalAmount: Number(formDigitalAmount || 0),
+        totalAmount: safeTotal,
+        cashAmount: safeCash,
+        checksAmount: safeChecks,
+        digitalAmount: safeDigital,
         cashBreakdown: cashCounts,
         batchNumber: formBatchNumber,
         counters,
@@ -208,10 +213,10 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
         fundId: formFundId,
         accountId: formAccountId,
         category: formCategory,
-        totalAmount: computedTotalOffering,
-        cashAmount: computedCashTotal,
-        checksAmount: Number(formChecksAmount || 0),
-        digitalAmount: Number(formDigitalAmount || 0),
+        totalAmount: safeTotal,
+        cashAmount: safeCash,
+        checksAmount: safeChecks,
+        digitalAmount: safeDigital,
         cashBreakdown: cashCounts,
         batchNumber: formBatchNumber,
         counters,

@@ -2,6 +2,8 @@ import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import {
   getAuth,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   onAuthStateChanged,
   User,
@@ -105,6 +107,21 @@ export const initAuth = (
     return () => {};
   }
 
+  // Handle returning from signInWithRedirect if redirect flow was used
+  getRedirectResult(activeAuth)
+    .then((result) => {
+      if (result) {
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        if (credential?.accessToken) {
+          cachedAccessToken = credential.accessToken;
+          if (onAuthSuccess) onAuthSuccess(result.user, cachedAccessToken);
+        }
+      }
+    })
+    .catch((err) => {
+      console.warn('Redirect sign-in check:', err);
+    });
+
   return onAuthStateChanged(activeAuth, async (user: User | null) => {
     if (user) {
       if (cachedAccessToken) {
@@ -149,6 +166,14 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
     console.error('Google Sign-In error:', error);
     const code = error?.code || '';
     const host = typeof window !== 'undefined' ? window.location.hostname : 'your-domain.github.io';
+
+    // If popup was blocked by browser and we are not inside an iframe, fall back to signInWithRedirect
+    const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
+    if (code === 'auth/popup-blocked' && !isInIframe) {
+      await signInWithRedirect(activeAuth, provider);
+      return null;
+    }
+
     if (code === 'auth/unauthorized-domain') {
       throw new Error(
         `Domain "${host}" is not authorized in Firebase. Go to Firebase Console → Authentication → Settings → Authorized domains and add "${host}".`
