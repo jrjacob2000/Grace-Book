@@ -54,7 +54,7 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [periodFilter, setPeriodFilter] = useState<'all' | 'month'>('all');
+  const [periodFilter, setPeriodFilter] = useState<'all' | 'month'>('month');
   const [selectedFundFilter, setSelectedFundFilter] = useState('all');
   const [selectedServiceFilter, setSelectedServiceFilter] = useState('all');
 

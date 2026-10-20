@@ -52,7 +52,7 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [periodFilter, setPeriodFilter] = useState<'all' | 'month'>('all');
+  const [periodFilter, setPeriodFilter] = useState<'all' | 'month'>('month');
   const [selectedDeptFilter, setSelectedDeptFilter] = useState('all');
   const [selectedFundFilter, setSelectedFundFilter] = useState('all');
   const [selectedMethodFilter, setSelectedMethodFilter] = useState('all');

@@ -160,11 +160,21 @@ interface ChurchFinanceContextType {
 const ChurchFinanceContext = createContext<ChurchFinanceContextType | undefined>(undefined);
 
 export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Selected fiscal period
-  const [selectedYear, setSelectedYearState] = useState<number>(2026);
-  const [selectedMonth, setSelectedMonth] = useState<number>(8); // August 2026 default
+  // Selected fiscal period - default to current system date
+  const now = useMemo(() => new Date(), []);
+  const defaultYear = useMemo(() => {
+    const yr = now.getFullYear();
+    return yr >= 2000 && yr <= 2100 ? yr : 2026;
+  }, [now]);
+  const defaultMonth = useMemo(() => {
+    const m = now.getMonth() + 1;
+    return m >= 1 && m <= 12 ? m : 8;
+  }, [now]);
 
-  const [availableYears, setAvailableYears] = useState<number[]>([2025, 2026, 2027]);
+  const [selectedYear, setSelectedYearState] = useState<number>(defaultYear);
+  const [selectedMonth, setSelectedMonth] = useState<number>(defaultMonth);
+
+  const [availableYears, setAvailableYears] = useState<number[]>([defaultYear - 1, defaultYear, defaultYear + 1]);
 
   // Load state for selected year
   const loadYearDataFromStorage = (year: number): ChurchFinancialData => {
@@ -227,7 +237,7 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   };
 
-  const [data, setData] = useState<ChurchFinancialData>(() => loadYearDataFromStorage(2026));
+  const [data, setData] = useState<ChurchFinancialData>(() => loadYearDataFromStorage(defaultYear));
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [driveFile, setDriveFile] = useState<DriveFileInfo | null>(null);
