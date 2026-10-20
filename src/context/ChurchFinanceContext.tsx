@@ -160,16 +160,33 @@ interface ChurchFinanceContextType {
 const ChurchFinanceContext = createContext<ChurchFinanceContextType | undefined>(undefined);
 
 export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Selected fiscal period - default to current system date
+  // Selected fiscal period - smart default: August 2026 for sample demo data, or current system date for live production
   const now = useMemo(() => new Date(), []);
+  
+  const initialIsDemo = useMemo(() => {
+    try {
+      const saved2026 = localStorage.getItem(getStorageKeyForYear(2026));
+      if (saved2026) {
+        const parsed = JSON.parse(saved2026);
+        if (parsed?.isDemoData !== undefined) return parsed.isDemoData;
+      }
+    } catch {
+      // ignore
+    }
+    return true; // Default to demo sample data
+  }, []);
+
   const defaultYear = useMemo(() => {
+    if (initialIsDemo) return 2026;
     const yr = now.getFullYear();
     return yr >= 2000 && yr <= 2100 ? yr : 2026;
-  }, [now]);
+  }, [initialIsDemo, now]);
+
   const defaultMonth = useMemo(() => {
+    if (initialIsDemo) return 8; // August 2026 contains sample transactions
     const m = now.getMonth() + 1;
     return m >= 1 && m <= 12 ? m : 8;
-  }, [now]);
+  }, [initialIsDemo, now]);
 
   const [selectedYear, setSelectedYearState] = useState<number>(defaultYear);
   const [selectedMonth, setSelectedMonth] = useState<number>(defaultMonth);
