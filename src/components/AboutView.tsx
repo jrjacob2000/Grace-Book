@@ -161,18 +161,62 @@ export const AboutView: React.FC<AboutViewProps> = ({
         })}
       </div>
 
-      {/* Privacy Card */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex items-start gap-3.5">
-        <div className="w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shrink-0">
-          <Lock className="w-4 h-4" />
+      {/* Privacy & Data Security Card */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div className="flex items-start gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shrink-0">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="font-bold text-slate-900 text-base">
+              100% Congregation-Owned &amp; Data Security Architecture
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              GraceBooks is built on a strict <strong>Local-First &amp; Zero-Knowledge Privacy</strong> architecture. Here is how your church's financial records are kept safe and private:
+            </p>
+          </div>
         </div>
-        <div className="space-y-1">
-          <h3 className="font-bold text-slate-900 text-sm">
-            100% Congregation-Owned &amp; Private
-          </h3>
-          <p className="text-xs text-slate-600 leading-relaxed">
-            Your financial records stay strictly in your browser, local JSON/CSV backups, and your own Google Drive folder (`drive.file`). No third-party servers, subscriptions, or fees.
-          </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+            <div className="flex items-center gap-2 text-slate-900 font-semibold text-xs sm:text-sm">
+              <Lock className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>1. Local Browser Sandboxing</span>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              All financial transactions, donor records, and fund balances reside strictly inside your browser&#39;s secure local storage. No external servers or cloud databases ever collect, store, or inspect your church books.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+            <div className="flex items-center gap-2 text-slate-900 font-semibold text-xs sm:text-sm">
+              <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
+              <span>2. Restricted Google Drive Sync</span>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              When syncing to the cloud, GraceBooks requests the minimal <code>drive.file</code> OAuth scope. The app can <strong>only</strong> access files it creates (your church ledger files) and cannot view or touch any other personal files in your Drive.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+            <div className="flex items-center gap-2 text-slate-900 font-semibold text-xs sm:text-sm">
+              <Scale className="w-4 h-4 text-indigo-600 shrink-0" />
+              <span>3. Backup Sanitization &amp; Defense</span>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              JSON backups and CSV imports are rigorously sanitized using secure parsing against prototype pollution and formula injection (DDE attacks), ensuring your ledger files remain safe and uncorrupted.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+            <div className="flex items-center gap-2 text-slate-900 font-semibold text-xs sm:text-sm">
+              <BookOpen className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>4. Complete Treasurer Control</span>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              You maintain total ownership. You can export a full JSON backup, switch between demo practice data and live production mode, or wipe records at any time directly from your settings.
+            </p>
+          </div>
         </div>
       </div>
 

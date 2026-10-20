@@ -743,7 +743,7 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       message: `This will reset all designated funds, bank accounts, collections, expenses, and categories for ${selectedYear} back to the fictional demonstration dataset.`,
       confirmLabel: 'Load Sample Data',
       isDestructive: true,
-      onConfirm: () => {
+      onConfirm: async () => {
         const resetData: ChurchFinancialData = {
           ...INITIAL_CHURCH_DATA,
           fiscalYear: selectedYear,
@@ -758,7 +758,22 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         setData(resetData);
         persistLocally(resetData, selectedYear);
         if (accessToken) {
-          setSyncStatus('unsaved_changes');
+          try {
+            setSyncStatus('syncing');
+            if (driveFile) {
+              const updated = await updateFinancialDataInDrive(accessToken, driveFile.id, resetData);
+              setDriveFile(updated);
+            } else {
+              const created = await createFinancialDataFileInDrive(accessToken, resetData, activeFileName);
+              setDriveFile(created);
+            }
+            setSyncStatus('synced');
+            setLastSavedAt(new Date().toLocaleTimeString());
+          } catch (e: any) {
+            console.error('Failed to sync sample reset to Drive:', e);
+            setSyncStatus('unsaved_changes');
+            setSyncError(`Sample dataset loaded locally, but Drive sync failed: ${e.message}`);
+          }
         }
       },
     });
@@ -771,7 +786,7 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       message: `This will clear all demonstration transactions (collections, expenses, transfers) and reset fund & bank account balances to zero so you can record real live church transactions for fiscal year ${selectedYear}.`,
       confirmLabel: 'Start Live Production Ledger',
       isDestructive: true,
-      onConfirm: () => {
+      onConfirm: async () => {
         const liveData: ChurchFinancialData = {
           ...data,
           isDemoData: false,
@@ -787,7 +802,22 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         setData(liveData);
         persistLocally(liveData, selectedYear);
         if (accessToken) {
-          setSyncStatus('unsaved_changes');
+          try {
+            setSyncStatus('syncing');
+            if (driveFile) {
+              const updated = await updateFinancialDataInDrive(accessToken, driveFile.id, liveData);
+              setDriveFile(updated);
+            } else {
+              const created = await createFinancialDataFileInDrive(accessToken, liveData, activeFileName);
+              setDriveFile(created);
+            }
+            setSyncStatus('synced');
+            setLastSavedAt(new Date().toLocaleTimeString());
+          } catch (e: any) {
+            console.error('Failed to sync live ledger to Drive:', e);
+            setSyncStatus('unsaved_changes');
+            setSyncError(`Live ledger started locally, but Drive sync failed: ${e.message}`);
+          }
         }
       },
     });

@@ -28,6 +28,7 @@ export const DataModeModal: React.FC<DataModeModalProps> = ({
     selectedYear,
     startFreshLiveLedger,
     reloadDemoData,
+    exportJsonFile,
   } = useChurchFinance();
 
   if (!isOpen) return null;
@@ -103,6 +104,22 @@ export const DataModeModal: React.FC<DataModeModalProps> = ({
             <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px] text-slate-500">
               Data Management & Mode Options
             </h4>
+
+            {/* Quick Export Backup Option */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <span className="font-bold text-slate-800 text-xs">Need to save your current work first?</span>
+                <p className="text-[11px] text-slate-500">Download a complete JSON system backup before switching modes.</p>
+              </div>
+              <button
+                onClick={() => {
+                  exportJsonFile();
+                }}
+                className="py-2 px-3 bg-white hover:bg-slate-100 text-slate-700 font-semibold rounded-lg text-xs border border-slate-300 shrink-0 shadow-xs transition-colors"
+              >
+                Export Backup
+              </button>
+            </div>
 
             {/* Option 1: Start Live Ledger */}
             <div className="p-4 bg-white border border-slate-200 hover:border-blue-300 rounded-xl space-y-2.5 transition-colors shadow-xs">
