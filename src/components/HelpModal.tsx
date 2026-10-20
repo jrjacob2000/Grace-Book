@@ -1138,7 +1138,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
           </div>
 
           {/* Category Chips */}
-          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          <div className="flex gap-1.5 overflow-x-auto pb-2 scroll-smooth touch-pan-x select-none">
             {categories.map((c) => {
               const Icon = c.icon;
               const isSelected = selectedCategory === c.id;
