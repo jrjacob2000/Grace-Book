@@ -15,10 +15,31 @@ import { HelpModal } from './components/HelpModal';
 import { ImportDataModal } from './components/ImportDataModal';
 import { DataModeModal } from './components/DataModeModal';
 import { AboutView } from './components/AboutView';
+import { PrivacyPolicyView } from './components/PrivacyPolicyView';
+import { TermsOfServiceView } from './components/TermsOfServiceView';
 import { APP_NAME, APP_VERSION, APP_ISSUES_URL } from './constants/version';
 
+const getInitialTabFromUrl = (): string => {
+  if (typeof window === 'undefined') return 'dashboard';
+  const params = new URLSearchParams(window.location.search);
+  const pageParam = params.get('page')?.toLowerCase();
+  const hash = window.location.hash.replace('#', '').replace('/', '').toLowerCase();
+  const pathname = window.location.pathname.toLowerCase();
+
+  if (pageParam === 'privacy' || hash === 'privacy' || pathname.endsWith('/privacy')) {
+    return 'privacy';
+  }
+  if (pageParam === 'terms' || hash === 'terms' || pathname.endsWith('/terms')) {
+    return 'terms';
+  }
+  if (pageParam === 'about' || hash === 'about') {
+    return 'about';
+  }
+  return 'dashboard';
+};
+
 const AppContent: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(getInitialTabFromUrl);
   const [isDriveModalOpen, setIsDriveModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isRolloverModalOpen, setIsRolloverModalOpen] = useState(false);
@@ -132,6 +153,14 @@ const AppContent: React.FC = () => {
             onOpenDrive={() => setIsDriveModalOpen(true)}
           />
         )}
+
+        {activeTab === 'privacy' && (
+          <PrivacyPolicyView onNavigate={(tab) => setActiveTab(tab)} />
+        )}
+
+        {activeTab === 'terms' && (
+          <TermsOfServiceView onNavigate={(tab) => setActiveTab(tab)} />
+        )}
       </main>
 
       <footer className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 mt-8 border-t border-slate-200/80 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2 print:hidden">
@@ -142,7 +171,7 @@ const AppContent: React.FC = () => {
           <span className="hidden md:inline">•</span>
           <span className="hidden md:inline">Local-First Church Fund Accounting &amp; Stewardship</span>
         </div>
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+        <div className="flex flex-wrap items-center justify-center gap-x-3.5 gap-y-1">
           <button
             onClick={() => setActiveTab('about')}
             className={`hover:text-blue-600 transition-colors cursor-pointer ${
@@ -150,6 +179,24 @@ const AppContent: React.FC = () => {
             }`}
           >
             About GraceBooks
+          </button>
+          <span>•</span>
+          <button
+            onClick={() => setActiveTab('privacy')}
+            className={`hover:text-blue-600 transition-colors cursor-pointer ${
+              activeTab === 'privacy' ? 'text-blue-600 font-semibold' : ''
+            }`}
+          >
+            Privacy Policy
+          </button>
+          <span>•</span>
+          <button
+            onClick={() => setActiveTab('terms')}
+            className={`hover:text-blue-600 transition-colors cursor-pointer ${
+              activeTab === 'terms' ? 'text-blue-600 font-semibold' : ''
+            }`}
+          >
+            Terms of Service
           </button>
           <span>•</span>
           <button

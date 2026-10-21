@@ -218,6 +218,29 @@ export const AboutView: React.FC<AboutViewProps> = ({
             </p>
           </div>
         </div>
+
+        {/* Legal & Google Verification Links Footer inside Privacy Card */}
+        <div className="pt-3 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-xs text-slate-500">
+            Official public policies for congregation governance &amp; Google OAuth verification:
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => onNavigate('privacy')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold transition-colors cursor-pointer"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Privacy Policy</span>
+            </button>
+            <button
+              onClick={() => onNavigate('terms')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-xs font-semibold transition-colors cursor-pointer"
+            >
+              <Scale className="w-3.5 h-3.5 text-blue-600" />
+              <span>Terms of Service</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Bug Reports, Issue Tracker & Feature Requests Banner */}

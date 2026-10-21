@@ -22,11 +22,27 @@ const cleanEnvValue = (val: string | undefined): string => {
     .trim();
 };
 
-const rawProjectId = cleanEnvValue(
-  import.meta.env.VITE_FIREBASE_PROJECT_ID || rawAppletConfig.projectId
+const resolveConfigValue = (envVal: string | undefined, fallbackVal: string | undefined): string => {
+  const cleanedEnv = cleanEnvValue(envVal);
+  if (
+    cleanedEnv &&
+    cleanedEnv.toLowerCase() !== 'undefined' &&
+    cleanedEnv.toLowerCase() !== 'null' &&
+    !cleanedEnv.startsWith('YOUR_') &&
+    !cleanedEnv.startsWith('MY_')
+  ) {
+    return cleanedEnv;
+  }
+  return cleanEnvValue(fallbackVal);
+};
+
+const rawProjectId = resolveConfigValue(
+  import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  rawAppletConfig.projectId
 );
-const rawAuthDomain = cleanEnvValue(
-  import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || rawAppletConfig.authDomain
+const rawAuthDomain = resolveConfigValue(
+  import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  rawAppletConfig.authDomain
 );
 
 // Always use <projectId>.firebaseapp.com if authDomain is empty or set to github.io
@@ -38,18 +54,19 @@ const normalizedAuthDomain =
     : rawAuthDomain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 
 const resolvedConfig = {
-  apiKey: cleanEnvValue(import.meta.env.VITE_FIREBASE_API_KEY || rawAppletConfig.apiKey),
+  apiKey: resolveConfigValue(import.meta.env.VITE_FIREBASE_API_KEY, rawAppletConfig.apiKey),
   authDomain: normalizedAuthDomain,
   projectId: rawProjectId,
-  storageBucket: cleanEnvValue(
-    import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ||
-      rawAppletConfig.storageBucket ||
-      (rawProjectId ? `${rawProjectId}.firebasestorage.app` : '')
+  storageBucket:
+    resolveConfigValue(
+      import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+      rawAppletConfig.storageBucket
+    ) || (rawProjectId ? `${rawProjectId}.firebasestorage.app` : ''),
+  messagingSenderId: resolveConfigValue(
+    import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    rawAppletConfig.messagingSenderId
   ),
-  messagingSenderId: cleanEnvValue(
-    import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || rawAppletConfig.messagingSenderId
-  ),
-  appId: cleanEnvValue(import.meta.env.VITE_FIREBASE_APP_ID || rawAppletConfig.appId),
+  appId: resolveConfigValue(import.meta.env.VITE_FIREBASE_APP_ID, rawAppletConfig.appId),
 };
 
 export const isFirebaseConfigured = (): boolean => {
