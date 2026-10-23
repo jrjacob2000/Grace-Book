@@ -82,61 +82,64 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="w-full max-w-xl bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 text-blue-700 rounded-lg">
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex items-center justify-between gap-2 bg-slate-50">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 bg-blue-100 text-blue-700 rounded-lg shrink-0">
               <Cloud className="w-5 h-5" />
             </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Annual Google Drive Ledgers</h2>
-              <p className="text-xs text-slate-500">
+            <div className="min-w-0">
+              <h2 className="text-base font-bold text-slate-900 truncate">Annual Google Drive Ledgers</h2>
+              <p className="text-xs text-slate-500 break-all">
                 Fiscal Year {selectedYear} File: <span className="font-mono font-semibold text-blue-700">{activeFileName}</span>
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200/60 transition-colors"
+            className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200/60 transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-5 text-sm">
+        <div className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden space-y-5 text-sm">
           {/* Drive Status Banner */}
           <div className="p-4 rounded-xl border bg-slate-50 border-slate-200">
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 block">
-                  Google Drive Connection
-                </span>
-                <p className="text-base font-semibold text-slate-800 mt-0.5">
-                  {user ? (
-                    <span className="text-emerald-700 flex items-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      Connected as {user.email || user.displayName}
-                    </span>
-                  ) : (
-                    <span className="text-slate-600">Not connected to Google Drive</span>
-                  )}
-                </p>
-              </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Google Drive Connection
+              </span>
 
               {!user ? (
                 <button
                   onClick={loginWithGoogle}
-                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors"
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors shrink-0 whitespace-nowrap"
                 >
                   Connect Drive
                 </button>
               ) : (
-                <span className="px-2.5 py-1 text-xs font-medium bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200">
+                <span className="px-2.5 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200 shrink-0 whitespace-nowrap">
                   Drive Active
                 </span>
+              )}
+            </div>
+
+            <div className="mt-1.5 min-w-0">
+              {user ? (
+                <div className="text-emerald-700 flex items-center gap-1.5 min-w-0">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="text-sm sm:text-base font-semibold break-all">
+                    Connected as {user.email || user.displayName}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-sm sm:text-base font-semibold text-slate-600">
+                  Not connected to Google Drive
+                </p>
               )}
             </div>
 
@@ -144,15 +147,15 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
               <div className="mt-4 pt-3 border-t border-slate-200/80 space-y-3">
                 {/* Dedicated Folder Info Card */}
                 <div className="p-3 bg-white border border-blue-200 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs">
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2.5 min-w-0">
                     <div className="p-1.5 bg-blue-100 text-blue-700 rounded-md shrink-0">
                       <FolderOpen className="w-4 h-4 text-blue-600" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <span className="text-[10px] font-semibold text-blue-600 uppercase tracking-wider block">
                         Dedicated Google Drive Folder
                       </span>
-                      <span className="font-bold text-slate-900 text-xs sm:text-sm">
+                      <span className="font-bold text-slate-900 text-xs sm:text-sm block truncate">
                         {driveFolderName}
                       </span>
                     </div>
@@ -163,7 +166,7 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
                       href={getSafeDriveWebUrl(driveFolder.webViewLink, driveFolder.id, true)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 rounded-lg text-xs font-semibold shrink-0 transition-colors"
+                      className="inline-flex items-center justify-center sm:justify-start gap-1.5 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 rounded-lg text-xs font-semibold shrink-0 transition-colors"
                     >
                       <span>Open Folder in Drive</span>
                       <ExternalLink className="w-3.5 h-3.5" />
@@ -172,12 +175,12 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div>
+                  <div className="min-w-0">
                     <span className="text-slate-500 block">Current Annual File:</span>
-                    <span className="font-mono font-bold text-slate-800">
+                    <span className="font-mono font-bold text-slate-800 break-all block">
                       {activeFileName}
                     </span>
-                    <span className="text-[11px] text-slate-500 block">
+                    <span className="text-[11px] text-slate-500 block truncate">
                       {driveFile ? `File ID: ${driveFile.id.substring(0, 14)}...` : '(Ready to create in Drive)'}
                     </span>
                   </div>
@@ -193,10 +196,10 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
                         href={getSafeDriveWebUrl(driveFile.webViewLink, driveFile.id, false)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1 text-xs font-medium"
+                        className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1 text-xs font-medium break-all"
                       >
                         <span>Open {activeFileName} file directly</span>
-                        <ExternalLink className="w-3.5 h-3.5" />
+                        <ExternalLink className="w-3.5 h-3.5 shrink-0" />
                       </a>
                     </div>
                   )}
@@ -207,7 +210,7 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
             {syncError && (
               <div className="mt-3 p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-xs flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500" />
-                <span>{syncError}</span>
+                <span className="break-words min-w-0">{syncError}</span>
               </div>
             )}
           </div>
@@ -215,12 +218,12 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
           {/* ALL ANNUAL FILES ON GOOGLE DRIVE */}
           {user && annualDriveFiles.length > 0 && (
             <div className="space-y-2.5 p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
-              <h3 className="font-semibold text-slate-900 text-xs uppercase tracking-wider flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <FolderOpen className="w-4 h-4 text-blue-600" />
-                  <span>Annual Ledger Files in Your Google Drive</span>
+              <h3 className="font-semibold text-slate-900 text-xs uppercase tracking-wider flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 min-w-0">
+                  <FolderOpen className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span className="truncate">Annual Ledger Files in Your Google Drive</span>
                 </span>
-                <span className="text-[10px] text-slate-500 font-normal">
+                <span className="text-[10px] text-slate-500 font-normal shrink-0 whitespace-nowrap">
                   {annualDriveFiles.length} file(s) found
                 </span>
               </h3>
@@ -232,11 +235,14 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
                   const isCurrent = file.name === activeFileName;
 
                   return (
-                    <div key={file.id} className="py-2 flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <FileCode className={`w-4 h-4 ${isCurrent ? 'text-blue-600' : 'text-slate-400'}`} />
-                        <div>
-                          <span className={`font-mono font-medium ${isCurrent ? 'text-blue-700 font-bold' : 'text-slate-800'}`}>
+                    <div key={file.id} className="py-2 flex items-center justify-between gap-2 text-xs min-w-0">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <FileCode className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-blue-600' : 'text-slate-400'}`} />
+                        <div className="min-w-0 flex-1">
+                          <span
+                            className={`font-mono font-medium block truncate ${isCurrent ? 'text-blue-700 font-bold' : 'text-slate-800'}`}
+                            title={file.name}
+                          >
                             {file.name}
                           </span>
                           <span className="text-[10px] text-slate-400 block">
@@ -245,9 +251,9 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         {isCurrent ? (
-                          <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-semibold rounded">
+                          <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-semibold rounded whitespace-nowrap">
                             Active
                           </span>
                         ) : fileYear ? (
@@ -256,7 +262,7 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
                               setSelectedYear(fileYear);
                               onClose();
                             }}
-                            className="px-2 py-1 text-[11px] bg-white hover:bg-slate-100 border border-slate-300 rounded text-slate-700 font-medium"
+                            className="px-2 py-1 text-[11px] bg-white hover:bg-slate-100 border border-slate-300 rounded text-slate-700 font-medium whitespace-nowrap"
                           >
                             Switch to {fileYear}
                           </button>
@@ -267,7 +273,7 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
                             href={getSafeDriveWebUrl(file.webViewLink, file.id, false)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1 text-slate-400 hover:text-slate-600"
+                            className="p-1 text-slate-400 hover:text-slate-600 shrink-0"
                             title="Open in Drive"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
@@ -284,7 +290,7 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
           {/* Drive Actions for Current Annual File */}
           {user && (
             <div className="space-y-3">
-              <h3 className="font-semibold text-slate-900 text-xs uppercase tracking-wider">
+              <h3 className="font-semibold text-slate-900 text-xs uppercase tracking-wider break-all">
                 Current File Operations ({activeFileName})
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
