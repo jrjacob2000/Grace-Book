@@ -69,7 +69,7 @@ export function toSafeFiscalYear(val: unknown, fallback = 2026): number {
  * Validates Google Drive File/Folder IDs to prevent path traversal or query injection.
  */
 export function isValidDriveId(id: unknown): id is string {
-  return typeof id === 'string' && /^[a-zA-Z0-9_-]{5,128}$/.test(id);
+  return typeof id === 'string' && /^[a-zA-Z0-9_-]{4,128}$/.test(id);
 }
 
 /**

@@ -379,16 +379,12 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [persistLocally]);
 
-  // Year Switcher Handler
+  // Year Switcher Handler (useEffect below handles checking Drive when selectedYear changes)
   const setSelectedYear = useCallback((newYear: number) => {
     setSelectedYearState(newYear);
     const localData = loadYearDataFromStorage(newYear);
     setData(localData);
-
-    if (accessToken) {
-      checkDriveForYearFile(accessToken, newYear);
-    }
-  }, [accessToken, checkDriveForYearFile]);
+  }, []);
 
   // Auth initialization
   useEffect(() => {
@@ -413,7 +409,7 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [accessToken, selectedYear, checkDriveForYearFile]);
 
-  // Google Login Flow
+  // Google Login Flow (useEffect above automatically triggers checkDriveForYearFile once accessToken is set)
   const loginWithGoogle = async () => {
     try {
       setSyncStatus('syncing');
@@ -422,7 +418,8 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       if (res) {
         setUser(res.user);
         setAccessToken(res.accessToken);
-        await checkDriveForYearFile(res.accessToken, selectedYear);
+      } else {
+        setSyncStatus('idle');
       }
     } catch (err: any) {
       console.error('Login error:', err);
@@ -508,7 +505,7 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
     return executeSaveToDrive();
   };
 
-  // Reload data from Drive for current year
+  // Reload data from Drive for current year (also consolidates any duplicate folders/files across devices)
   const reloadFromGoogleDrive = async () => {
     if (!accessToken || !driveFile) return;
 
@@ -519,17 +516,7 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       confirmLabel: 'Reload from Drive',
       isDestructive: true,
       onConfirm: async () => {
-        setSyncStatus('syncing');
-        try {
-          const freshData = await readFinancialDataFromDrive(accessToken, driveFile.id);
-          setData(freshData);
-          persistLocally(freshData, selectedYear);
-          setSyncStatus('synced');
-          setLastSavedAt(new Date(freshData.lastModified || Date.now()).toLocaleTimeString());
-        } catch (err: any) {
-          setSyncError(err.message || 'Could not load from Google Drive');
-          setSyncStatus('error');
-        }
+        await checkDriveForYearFile(accessToken, selectedYear);
       },
     });
   };
@@ -630,12 +617,7 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         // 4. Update available years list
         setAvailableYears((prev) => Array.from(new Set([...prev, targetNextYear])).sort((a, b) => b - a));
 
-        // 5. Switch active year to targetNextYear and month to January
-        setSelectedYearState(targetNextYear);
-        setSelectedMonth(1);
-        setData(nextYearData);
-
-        // 6. Create next year file on Google Drive if connected
+        // 5. Create next year file on Google Drive BEFORE switching selectedYearState so useEffect finds the created file
         if (accessToken) {
           try {
             const newFile = await createFinancialDataFileInDrive(
@@ -654,6 +636,11 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
             setSyncError(`New year local ledger started, but failed to create Drive file: ${e.message}`);
           }
         }
+
+        // 6. Switch active year to targetNextYear and month to January
+        setSelectedYearState(targetNextYear);
+        setSelectedMonth(1);
+        setData(nextYearData);
       },
     });
   };

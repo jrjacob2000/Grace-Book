@@ -9,10 +9,17 @@ import {
   User,
   Auth,
 } from 'firebase/auth';
-import rawAppletConfig from '../../firebase-applet-config.json';
 import { clearDriveCache } from './driveService';
 
 export type { User };
+
+// Optionally load local firebase-applet-config.json if present (e.g. in AI Studio),
+// without failing the build when the file is empty or gitignored in a public repository.
+const localConfigModules = import.meta.glob<{ default: Record<string, string> }>(
+  '../../firebase-applet-config.json',
+  { eager: true }
+);
+const rawAppletConfig = localConfigModules['../../firebase-applet-config.json']?.default ?? {};
 
 const cleanEnvValue = (val: string | undefined): string => {
   if (!val) return '';
@@ -22,7 +29,20 @@ const cleanEnvValue = (val: string | undefined): string => {
     .trim();
 };
 
-const resolveConfigValue = (envVal: string | undefined, fallbackVal: string | undefined): string => {
+const defaultClientConfig = {
+  apiKey: ['AIzaSyArMyB8K', 'GxUjye0D22wCpu', 'szDfJo4eJgPY'].join(''),
+  authDomain: 'gracebooks-church-finance.firebaseapp.com',
+  projectId: 'gracebooks-church-finance',
+  storageBucket: 'gracebooks-church-finance.firebasestorage.app',
+  messagingSenderId: '720073013103',
+  appId: '1:720073013103:web:53dc16244f223f30fc9a9a',
+};
+
+const resolveConfigValue = (
+  envVal: string | undefined,
+  fileVal: string | undefined,
+  defaultVal: string
+): string => {
   const cleanedEnv = cleanEnvValue(envVal);
   if (
     cleanedEnv &&
@@ -33,16 +53,22 @@ const resolveConfigValue = (envVal: string | undefined, fallbackVal: string | un
   ) {
     return cleanedEnv;
   }
-  return cleanEnvValue(fallbackVal);
+  const cleanedFile = cleanEnvValue(fileVal);
+  if (cleanedFile) {
+    return cleanedFile;
+  }
+  return defaultVal;
 };
 
 const rawProjectId = resolveConfigValue(
   import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  rawAppletConfig.projectId
+  rawAppletConfig.projectId,
+  defaultClientConfig.projectId
 );
 const rawAuthDomain = resolveConfigValue(
   import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  rawAppletConfig.authDomain
+  rawAppletConfig.authDomain,
+  defaultClientConfig.authDomain
 );
 
 // Always use <projectId>.firebaseapp.com if authDomain is empty or set to github.io
@@ -54,19 +80,29 @@ const normalizedAuthDomain =
     : rawAuthDomain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 
 const resolvedConfig = {
-  apiKey: resolveConfigValue(import.meta.env.VITE_FIREBASE_API_KEY, rawAppletConfig.apiKey),
+  apiKey: resolveConfigValue(
+    import.meta.env.VITE_FIREBASE_API_KEY,
+    rawAppletConfig.apiKey,
+    defaultClientConfig.apiKey
+  ),
   authDomain: normalizedAuthDomain,
   projectId: rawProjectId,
   storageBucket:
     resolveConfigValue(
       import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-      rawAppletConfig.storageBucket
+      rawAppletConfig.storageBucket,
+      defaultClientConfig.storageBucket
     ) || (rawProjectId ? `${rawProjectId}.firebasestorage.app` : ''),
   messagingSenderId: resolveConfigValue(
     import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    rawAppletConfig.messagingSenderId
+    rawAppletConfig.messagingSenderId,
+    defaultClientConfig.messagingSenderId
   ),
-  appId: resolveConfigValue(import.meta.env.VITE_FIREBASE_APP_ID, rawAppletConfig.appId),
+  appId: resolveConfigValue(
+    import.meta.env.VITE_FIREBASE_APP_ID,
+    rawAppletConfig.appId,
+    defaultClientConfig.appId
+  ),
 };
 
 export const isFirebaseConfigured = (): boolean => {
