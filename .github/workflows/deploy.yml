@@ -34,7 +34,9 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build project
-        run: bun run build
+        run: |
+          rm -rf .aistudio public/assets/aistudio
+          bun run build
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY || vars.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN || vars.VITE_FIREBASE_AUTH_DOMAIN }}

@@ -30,3 +30,10 @@ firebase-applet-config.local.json
 *.pem
 *.key
 *.cert
+
+# AI Studio Artifacts & Chat Attachments
+.aistudio/
+.aistudio
+public/assets/aistudio/
+assets/aistudio/
+
