@@ -45,6 +45,33 @@ import {
 export const getStorageKeyForYear = (year: number) =>
   `gracebooks_cfgp_data_${toSafeFiscalYear(year)}`;
 
+export const getUnsavedKeyForYear = (year: number) =>
+  `gracebooks_cfgp_unsaved_${toSafeFiscalYear(year)}`;
+
+const markYearUnsaved = (year: number) => {
+  try {
+    localStorage.setItem(getUnsavedKeyForYear(year), 'true');
+  } catch {
+    // ignore storage errors
+  }
+};
+
+const clearYearUnsaved = (year: number) => {
+  try {
+    localStorage.removeItem(getUnsavedKeyForYear(year));
+  } catch {
+    // ignore storage errors
+  }
+};
+
+const hasUnsavedChangesForYear = (year: number): boolean => {
+  try {
+    return localStorage.getItem(getUnsavedKeyForYear(year)) === 'true';
+  } catch {
+    return false;
+  }
+};
+
 const round2 = (num: number): number => Math.round((num + Number.EPSILON) * 100) / 100;
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error' | 'unsaved_changes';
@@ -57,6 +84,7 @@ export interface PendingConfirmation {
   confirmLabel: string;
   isDestructive?: boolean;
   onConfirm: () => Promise<void> | void;
+  onCancel?: () => void;
 }
 
 interface ChurchFinanceContextType {
@@ -105,6 +133,7 @@ interface ChurchFinanceContextType {
     confirmLabel?: string;
     isDestructive?: boolean;
     onConfirm: () => Promise<void> | void;
+    onCancel?: () => void;
   }) => void;
 
   // Actions
@@ -271,7 +300,12 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
   const [pendingConfirmation, setPendingConfirmation] = useState<PendingConfirmation | null>(null);
 
   const closeConfirmation = useCallback(() => {
-    setPendingConfirmation(null);
+    setPendingConfirmation((prev) => {
+      if (prev?.onCancel) {
+        prev.onCancel();
+      }
+      return null;
+    });
   }, []);
 
   const requestUserConfirmation = useCallback((opts: {
@@ -281,6 +315,7 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
     confirmLabel?: string;
     isDestructive?: boolean;
     onConfirm: () => Promise<void> | void;
+    onCancel?: () => void;
   }) => {
     setPendingConfirmation({
       isOpen: true,
@@ -293,6 +328,7 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         setPendingConfirmation(null);
         await opts.onConfirm();
       },
+      onCancel: opts.onCancel,
     });
   }, []);
 
@@ -312,6 +348,7 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         const next = updater(prev);
         next.lastModified = new Date().toISOString();
         persistLocally(next, selectedYear);
+        markYearUnsaved(selectedYear);
         if (accessToken) {
           setSyncStatus('unsaved_changes');
         }
@@ -322,7 +359,7 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   // Search Drive for file for the active year
-  const checkDriveForYearFile = useCallback(async (token: string, year: number) => {
+  const checkDriveForYearFile = useCallback(async (token: string, year: number, forceReloadFromDrive: boolean = false) => {
     setSyncStatus('syncing');
     setSyncError(null);
     try {
@@ -334,18 +371,26 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       const file = await findDriveFileForYear(token, year);
+      const localHasUnsaved = hasUnsavedChangesForYear(year);
+
       if (file) {
         setDriveFile(file);
-        const remoteData = await readFinancialDataFromDrive(token, file.id);
-        if (remoteData && remoteData.funds) {
-          setData(remoteData);
-          persistLocally(remoteData, year);
-          setSyncStatus('synced');
-          setLastSavedAt(new Date(file.modifiedTime).toLocaleTimeString());
+        if (!forceReloadFromDrive && localHasUnsaved) {
+          // Preserve unsaved local edits in browser storage rather than overwriting with older Drive copy
+          setSyncStatus('unsaved_changes');
+        } else {
+          const remoteData = await readFinancialDataFromDrive(token, file.id);
+          if (remoteData && remoteData.funds) {
+            setData(remoteData);
+            persistLocally(remoteData, year);
+            clearYearUnsaved(year);
+            setSyncStatus('synced');
+            setLastSavedAt(new Date(file.modifiedTime).toLocaleTimeString());
+          }
         }
       } else {
         setDriveFile(null);
-        setSyncStatus('idle');
+        setSyncStatus(localHasUnsaved ? 'unsaved_changes' : 'idle');
       }
 
       // Refresh list of all annual files
@@ -384,7 +429,10 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
     setSelectedYearState(newYear);
     const localData = loadYearDataFromStorage(newYear);
     setData(localData);
-  }, []);
+    if (!accessToken) {
+      setSyncStatus('idle');
+    }
+  }, [accessToken]);
 
   // Auth initialization
   useEffect(() => {
@@ -405,7 +453,7 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     if (accessToken) {
-      checkDriveForYearFile(accessToken, selectedYear);
+      checkDriveForYearFile(accessToken, selectedYear, false);
     }
   }, [accessToken, selectedYear, checkDriveForYearFile]);
 
@@ -457,6 +505,7 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         const created = await createFinancialDataFileInDrive(token, data, activeFileName);
         setDriveFile(created);
       }
+      clearYearUnsaved(selectedYear);
       setSyncStatus('synced');
       setLastSavedAt(new Date().toLocaleTimeString());
 
@@ -498,6 +547,9 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
             const success = await executeSaveToDrive();
             resolve(success);
           },
+          onCancel: () => {
+            resolve(false);
+          },
         });
       });
     }
@@ -516,7 +568,7 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       confirmLabel: 'Reload from Drive',
       isDestructive: true,
       onConfirm: async () => {
-        await checkDriveForYearFile(accessToken, selectedYear);
+        await checkDriveForYearFile(accessToken, selectedYear, true);
       },
     });
   };
@@ -575,6 +627,9 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
           } else {
             await createFinancialDataFileInDrive(accessToken, closedCurrentYearData, activeFileName);
           }
+          clearYearUnsaved(selectedYear);
+        } else {
+          markYearUnsaved(selectedYear);
         }
 
         // 2. Prepare next year rollover dataset
@@ -625,6 +680,7 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
               nextYearData,
               getDriveFileNameForYear(targetNextYear)
             );
+            clearYearUnsaved(targetNextYear);
             setDriveFile(newFile);
             setSyncStatus('synced');
             setLastSavedAt(new Date().toLocaleTimeString());
@@ -633,8 +689,11 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
             setAnnualDriveFiles(allFiles);
           } catch (e: any) {
             console.error('Failed to create new year file on Google Drive:', e);
+            markYearUnsaved(targetNextYear);
             setSyncError(`New year local ledger started, but failed to create Drive file: ${e.message}`);
           }
+        } else {
+          markYearUnsaved(targetNextYear);
         }
 
         // 6. Switch active year to targetNextYear and month to January
@@ -673,6 +732,7 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         setSelectedYearState(fileYear);
         setData(sanitized);
         persistLocally(sanitized, fileYear);
+        markYearUnsaved(fileYear);
         if (accessToken) {
           setSyncStatus('unsaved_changes');
         }
@@ -781,13 +841,17 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
               const created = await createFinancialDataFileInDrive(accessToken, resetData, activeFileName);
               setDriveFile(created);
             }
+            clearYearUnsaved(selectedYear);
             setSyncStatus('synced');
             setLastSavedAt(new Date().toLocaleTimeString());
           } catch (e: any) {
             console.error('Failed to sync sample reset to Drive:', e);
+            markYearUnsaved(selectedYear);
             setSyncStatus('unsaved_changes');
             setSyncError(`Sample dataset loaded locally, but Drive sync failed: ${e.message}`);
           }
+        } else {
+          clearYearUnsaved(selectedYear);
         }
       },
     });
@@ -825,13 +889,17 @@ export const ChurchFinanceProvider: React.FC<{ children: React.ReactNode }> = ({
               const created = await createFinancialDataFileInDrive(accessToken, liveData, activeFileName);
               setDriveFile(created);
             }
+            clearYearUnsaved(selectedYear);
             setSyncStatus('synced');
             setLastSavedAt(new Date().toLocaleTimeString());
           } catch (e: any) {
             console.error('Failed to sync live ledger to Drive:', e);
+            markYearUnsaved(selectedYear);
             setSyncStatus('unsaved_changes');
             setSyncError(`Live ledger started locally, but Drive sync failed: ${e.message}`);
           }
+        } else {
+          markYearUnsaved(selectedYear);
         }
       },
     });

@@ -49,7 +49,6 @@ export const Header: React.FC<HeaderProps> = ({
     activeFileName,
     loginWithGoogle,
     logout,
-    saveToGoogleDrive,
     exportJsonFile,
     selectedYear,
     selectedMonth,
@@ -246,44 +245,42 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-2">
               <button
                 onClick={onOpenDriveModal}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
                   syncStatus === 'synced'
                     ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/80 hover:bg-emerald-900/50'
                     : syncStatus === 'unsaved_changes'
-                    ? 'bg-amber-950/60 text-amber-300 border-amber-800/80 hover:bg-amber-900/50'
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/60 hover:bg-amber-500/30'
                     : syncStatus === 'syncing'
                     ? 'bg-blue-950/60 text-blue-300 border-blue-800/80 hover:bg-blue-900/50'
                     : syncStatus === 'error'
                     ? 'bg-rose-950/60 text-rose-300 border-rose-800/80 hover:bg-rose-900/50'
                     : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
                 }`}
-                title="Google Drive Storage Settings"
+                title={
+                  syncStatus === 'unsaved_changes'
+                    ? 'You have unsaved data — click to open Google Drive ledger and save'
+                    : 'Open Annual Google Drive Ledgers & Backups'
+                }
               >
-                {syncStatus === 'synced' && <CloudCheck className="w-4 h-4 text-emerald-400" />}
-                {syncStatus === 'unsaved_changes' && <Cloud className="w-4 h-4 text-amber-400" />}
-                {syncStatus === 'syncing' && <RefreshCw className="w-4 h-4 text-blue-400 animate-spin" />}
-                {syncStatus === 'error' && <AlertCircle className="w-4 h-4 text-rose-400" />}
-                {syncStatus === 'idle' && <Cloud className="w-4 h-4 text-slate-400" />}
+                {syncStatus === 'synced' && <CloudCheck className="w-4 h-4 text-emerald-400 shrink-0" />}
+                {syncStatus === 'unsaved_changes' && (
+                  <span className="relative flex h-2.5 w-2.5 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400"></span>
+                  </span>
+                )}
+                {syncStatus === 'syncing' && <RefreshCw className="w-4 h-4 text-blue-400 animate-spin shrink-0" />}
+                {syncStatus === 'error' && <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />}
+                {syncStatus === 'idle' && <Cloud className="w-4 h-4 text-slate-400 shrink-0" />}
 
-                <span className="hidden sm:inline">
+                <span>
                   {syncStatus === 'synced' && 'Drive Synced'}
-                  {syncStatus === 'unsaved_changes' && 'Unsaved'}
-                  {syncStatus === 'syncing' && 'Syncing...'}
+                  {syncStatus === 'unsaved_changes' && 'Unsaved Data'}
+                  {syncStatus === 'syncing' && 'Saving...'}
                   {syncStatus === 'error' && 'Drive Alert'}
                   {syncStatus === 'idle' && 'Drive Ready'}
                 </span>
               </button>
-
-              {syncStatus === 'unsaved_changes' && (
-                <button
-                  onClick={() => saveToGoogleDrive(false)}
-                  className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors flex items-center gap-1"
-                  title="Save current state to Google Drive"
-                >
-                  <Cloud className="w-3.5 h-3.5" />
-                  <span>Save</span>
-                </button>
-              )}
 
               <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
                 {user.photoURL ? (
